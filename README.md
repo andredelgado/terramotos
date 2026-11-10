@@ -4,6 +4,17 @@ Every recorded earthquake in mainland Portugal, the Azores and Madeira since 190
 seismograph drum: newest line on top, scroll down to go back in time. Switch to the list to browse
 individual earthquakes, newest first. Both views load years as needed. New earthquakes appear live.
 
+The map adds three fixed geographic panels using the bundled coastlines, with precise centre
+dots, magnitude-scaled outer circles, and a separate scale for each region. It opens on the last
+24 hours; the period control
+also offers 7 days, 30 days and a year. Entering from a historical drum or list carries its visible
+period and selected earthquake across. Shared map links include exact UTC `from` and `to` dates,
+so they reopen the same period. Dots can be selected by touch or with the arrow keys.
+
+The panels show Portugal with its neighbours, the main cities and islands, and the plate boundaries
+that explain where the earthquakes are. That geography is `seismograph/map.json` (25 KB), fetched
+the first time the map is opened and built by `python3 tools/build_map.py`.
+
 The page is in English and Portuguese, in light and dark. The address bar always holds a link to
 the current view (`#v=list` for the list, `s=1d&m=3&r=1` for the line length and filters, then `q=`
 for a pinned earthquake or `t=` for a UTC point in time), so any earthquake or moment can be shared.
@@ -22,9 +33,11 @@ earthquake (same event = within 30 s and 100 km):
 | [EMSC](https://www.seismicportal.eu/) | 1998 → now | Recent events, event pages, and the live feed in the browser |
 | [USGS](https://earthquake.usgs.gov/) | 1900 → now | Moment magnitudes (Mw) for large earthquakes |
 
-All four are free to use with attribution, which the page footer gives. The coastlines on the
-small map come from [Natural Earth](https://www.naturalearthdata.com/) (public domain), simplified
-and stored in the page itself.
+All four are free to use with attribution, which the page footer gives. The coastlines come
+from [Natural Earth](https://www.naturalearthdata.com/) (public domain). The plate boundaries are
+from Bird, P. (2003), *An updated digital model of plate boundaries*, as converted by Hugo Ahlenius,
+Nordpil ([tectonicplates](https://github.com/fraxen/tectonicplates), Open Data Commons Attribution
+License); the page's About dialog credits both.
 
 ## How it stays up to date
 
@@ -118,6 +131,7 @@ Things to know:
 ## Files
 
 - `update.py`: the command line
+- `tools/build_map.py`: builds `seismograph/map.json`, the map's land, plate boundaries and labels
 - `quake/sources.py`: readers for IPMA, the ISC, EMSC and USGS
 - `quake/store.py`: the database, merging, ids, and the site/CSV export
 - `quake/regions.py`: the three region outlines

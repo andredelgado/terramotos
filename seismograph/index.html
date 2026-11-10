@@ -86,7 +86,7 @@ select {
   border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--fg); cursor: pointer;
 }
 select:hover, .icon:hover { border-color: var(--muted); }
-button:focus-visible, select:focus-visible, .drum:focus-visible, .rail:focus-visible, a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+button:focus-visible, select:focus-visible, .drum:focus-visible, .rail:focus-visible, .map-plot:focus-visible, a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 .list:has(table:focus-visible) { outline: 2px solid var(--fg); outline-offset: -2px; }
 
 .status { display: flex; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); padding-bottom: 10px; }
@@ -118,6 +118,26 @@ main { flex: 1; min-height: 0; display: flex; gap: 12px; position: relative; bor
 
 .seg svg { display: block; }
 #views button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 9px; }
+.atlas { flex: 1; min-width: 0; overflow: auto; display: flex; flex-direction: column; }
+.map-panels { flex: 1; min-height: 440px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+.map-panel { min-width: 0; min-height: 0; display: flex; flex-direction: column; position: relative; }
+.map-panel:first-child { grid-row: 1 / 3; border-right: 1px solid var(--line); }
+.map-panel:nth-child(2) { border-bottom: 1px solid var(--line); }
+.map-panel header { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px 0; }
+.map-panel h2 { margin: 0; font-size: 13px; font-weight: 600; }
+.map-count { color: var(--muted); font-size: 12px; }
+.map-plot { display: block; flex: 1; min-height: 0; width: 100%; cursor: crosshair; touch-action: pan-y; }
+.map-panels.filtered { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+.map-panels.filtered .map-panel { grid-row: auto; border: 0; }
+.map-legend { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 14px; padding: 8px 14px 10px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.map-legend .sizes { display: inline-flex; align-items: flex-end; gap: 6px; }
+.map-legend svg { display: block; }
+.map-legend circle { fill: var(--fg); fill-opacity: 0.1; stroke: var(--fg); stroke-opacity: 0.3; }
+.map-legend circle.c { fill-opacity: 0.9; stroke: none; }
+.map-legend .plate { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; }
+.map-legend path { stroke: var(--muted); stroke-dasharray: 5 4; fill: none; }
+.atlas-empty { margin: 0; padding: 10px 14px 0; font-size: 13px; color: var(--muted); }
+.map-view .tip .map { display: none; }
 .list { flex: 1; min-width: 0; overflow-y: auto; overflow-anchor: none; scrollbar-width: none; }
 .list::-webkit-scrollbar { display: none; }
 .list table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
@@ -207,15 +227,21 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   .list-view .rail { position: absolute; right: 0; top: 0; bottom: 0; }
   .tip.docked { flex: 0 1 auto; width: 100%; max-height: 55%; margin-block: 8px; align-self: stretch; }
   .tip.docked .map { max-height: 120px; }
+  .map-panels { flex: none; display: flex; flex-direction: column; min-height: 0; }
+  .map-panel { flex: none; height: 280px; border-bottom: 1px solid var(--line); }
+  .map-panel:first-child { border-right: 0; }
+  .map-panels.filtered { flex: 1; min-height: 280px; }
+  .map-panels.filtered .map-panel { flex: 1; height: auto; min-height: 280px; }
 }
 @media (max-width: 600px) {
   h1 .unit { display: none; }
   .controls { gap: 8px; }
   .seg button { height: 36px; }
-  select { height: 40px; }
+  select { height: 40px; padding-inline: 8px 24px; background-position: right 8px center; }
   #views { margin-right: auto; }
-  #spans { flex: 1 1 calc(100% - 80px); }
-  #spans button { flex: 1; padding: 0; }
+  #views button { padding-inline: 7px; }
+  #spans, #periods { flex: 1 1 calc(100% - 120px); }
+  #spans button, #periods button { flex: 1; padding: 0; }
   .list th, .list td { padding-right: 8px; }
   .list th:first-child, .list td:first-child { padding-left: 8px; }
   .list th:nth-child(1) { width: 112px; }
@@ -245,6 +271,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     <div class="seg" role="group" aria-label="View" data-i18n-aria="aView" id="views">
       <button type="button" data-view="drum" aria-pressed="true" data-i18n-aria="vDrum"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8h3l1.5-4 2 8.5 2-7L11 8h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="view-label" data-i18n="vDrum">Seismograph</span></button>
       <button type="button" data-view="list" aria-pressed="false" data-i18n-aria="vList"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="view-label" data-i18n="vList">List</span></button>
+      <button type="button" data-view="map" aria-pressed="false" data-i18n-aria="vMap"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="m1.5 3 4-1.5 5 2 4-1.5v11l-4 1.5-5-2-4 1.5zM5.5 1.5v11m5-9v11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg><span class="view-label" data-i18n="vMap">Map</span></button>
     </div>
     <div class="seg" role="group" aria-label="Time per line" data-i18n-aria="aSpans" id="spans">
       <button type="button" data-span="3h" aria-pressed="true">3h</button>
@@ -252,6 +279,13 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       <button type="button" data-span="1w" aria-pressed="false" data-i18n="s1w">Week</button>
       <button type="button" data-span="1mo" aria-pressed="false" data-i18n="s1mo">Month</button>
       <button type="button" data-span="1y" aria-pressed="false" data-i18n="s1y">Year</button>
+    </div>
+    <div class="seg" role="group" data-i18n-aria="aPeriod" id="periods" hidden>
+      <button type="button" data-period="24h" aria-pressed="true">24h</button>
+      <button type="button" data-period="7d" aria-pressed="false" data-i18n="p7d">7d</button>
+      <button type="button" data-period="30d" aria-pressed="false" data-i18n="p30d">30d</button>
+      <button type="button" data-period="1y" aria-pressed="false" data-i18n="p1y">1y</button>
+      <button type="button" data-period="view" aria-pressed="false" data-i18n="pView" hidden>View</button>
     </div>
     <select id="mag" aria-label="Minimum magnitude" data-i18n-aria="aMag">
       <option value="all" data-i18n="mag">Magnitude</option>
@@ -292,6 +326,32 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       <tbody id="rows"></tbody>
     </table>
   </div>
+  <div class="atlas" id="atlas" hidden>
+    <p class="atlas-empty" id="mapEmpty" data-i18n="none" hidden>No earthquakes match these filters.</p>
+    <div class="map-panels" id="mapPanels">
+      <section class="map-panel" data-region="0" aria-labelledby="mapName0">
+        <header><h2 id="mapName0" data-i18n="r0">Mainland</h2><span class="map-count"></span></header>
+        <canvas class="map-plot" tabindex="0" role="group"></canvas>
+      </section>
+      <section class="map-panel" data-region="1" aria-labelledby="mapName1">
+        <header><h2 id="mapName1" data-i18n="r1">Azores</h2><span class="map-count"></span></header>
+        <canvas class="map-plot" tabindex="0" role="group"></canvas>
+      </section>
+      <section class="map-panel" data-region="2" aria-labelledby="mapName2">
+        <header><h2 id="mapName2" data-i18n="r2">Madeira</h2><span class="map-count"></span></header>
+        <canvas class="map-plot" tabindex="0" role="group"></canvas>
+      </section>
+    </div>
+    <div class="map-legend">
+      <span class="sizes" aria-hidden="true">
+        <svg width="14" height="44" viewBox="0 0 14 44"><circle cx="7" cy="37" r="6.5"/><circle class="c" cx="7" cy="37" r="2"/></svg>
+        <svg width="27" height="44" viewBox="0 0 27 44"><circle cx="13.5" cy="30.5" r="13"/><circle class="c" cx="13.5" cy="30.5" r="2"/></svg>
+        <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="21.4"/><circle class="c" cx="22" cy="22" r="2"/></svg>
+      </span>
+      <span data-i18n="lSizes">Magnitude 2, 4 and 6</span>
+      <span class="plate"><svg width="28" height="8" viewBox="0 0 28 8" aria-hidden="true"><path d="M0 4h28"/></svg><span data-i18n="lPlate">Plate boundary</span></span>
+    </div>
+  </div>
   <div class="rail" id="railBox" tabindex="0" role="slider" data-i18n-aria="aRail" aria-label="Timeline, newest at the top. Click or drag to travel in time." aria-valuemin="1909" aria-valuemax="2026" aria-valuenow="2026">
     <canvas id="rail"></canvas>
   </div>
@@ -327,7 +387,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       loc: 'en-GB', other: 'PT', aLang: 'Mudar para português',
       months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
       r0: 'Mainland', r1: 'Azores', r2: 'Madeira', unit: ' earthquakes',
-      s1d: 'Day', s1w: 'Week', s1mo: 'Month', s1y: 'Year', mag: 'Magnitude', region: 'Region',
+      s1d: 'Day', s1w: 'Week', s1mo: 'Month', s1y: 'Year', mag: 'Magnitude', region: 'Region', regionShort: 'Area',
       jump: 'Jump to…', jumpShort: 'Jump…', latest: 'Latest', largest: 'Largest earthquakes', decades: 'Decades', decade: (d) => `${d}s`,
       first: 'First earthquake on record', data: 'Data:', utc: 'Times in UTC',
       aSpans: 'Time per line', aMag: 'Minimum magnitude', aJump: 'Jump to', aTheme: 'Switch between light and dark',
@@ -337,14 +397,18 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
         <p>Every earthquake recorded in mainland Portugal, the Azores and Madeira since ${y}, drawn as a seismograph drum.</p>
         <ul>
           <li>The newest line is on top. Each line covers the time you choose, from 3 hours to a year, and reads left to right. The red dot is now.</li>
-          <li>Each wave is a generated illustration of one earthquake’s magnitude: taller and longer means stronger. Faded waves have no magnitude on record.</li>
+          <li>Each wave is a generated illustration of one earthquake’s magnitude: taller and longer means stronger. Faded waves and hollow map dots have no magnitude on record.</li>
           <li>Switch to the list to read individual earthquakes. Click an earthquake for its details, a map and a link to share. With the keyboard, use ← / → on the drum or ↑ / ↓ in the list to step between earthquakes.</li>
           <li>Before the 1960s only large earthquakes were recorded, so older lines look quiet.</li>
+          <li>The map uses fixed frames for the mainland, Azores and Madeira, each with its own scale. Outer circles are symbolic magnitude markers; reported felt intensity appears in the details. Choose a period or carry the visible period across from the drum or list. Shared map links preserve exact UTC dates.</li>
           <li>Magnitudes are on mixed scales (ML, mb, Ms, Mw). IPMA's magnitude is used wherever IPMA reported one.</li>
         </ul>
-        <p class="fine">Data from IPMA, the ISC Bulletin, EMSC and USGS. New earthquakes arrive live from EMSC and are preliminary until the catalogues confirm them. Map outlines from Natural Earth.</p>
+        <p class="fine">Data from IPMA, the ISC Bulletin, EMSC and USGS. New earthquakes arrive live from EMSC and are preliminary until the catalogues confirm them. Map outlines from Natural Earth; plate boundaries from Bird (2003), as converted by Hugo Ahlenius, Nordpil.</p>
         <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Download the data</a> (CSV, free for non-commercial use with credit to the sources)</p>`,
-      aView: 'View', vDrum: 'Seismograph', vList: 'List', cTime: 'Time (UTC)', cPlace: 'Place', cDepth: 'Depth',
+      aView: 'View', vDrum: 'Seismograph', vList: 'List', vMap: 'Map', cTime: 'Time (UTC)', cPlace: 'Place', cDepth: 'Depth',
+      lSizes: 'Magnitude 2, 4 and 6', lPlate: 'Plate boundary',
+      aPeriod: 'Map period', p7d: '7d', p30d: '30d', p1y: '1y', pView: 'View',
+      aRegionMap: (r, n) => `${r} map, ${n} earthquakes. Select a dot or use left and right arrows to select earthquakes.`,
       prelimShort: 'preliminary', none: 'No earthquakes match these filters.',
       aList: 'Earthquakes, newest first. Up and down arrows select the next or previous earthquake.',
       aRail: 'Timeline, newest at the top. Click or drag to travel in time.', aMap: 'Map showing where the earthquake was',
@@ -365,7 +429,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       loc: 'pt-PT', other: 'EN', aLang: 'Switch to English',
       months: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
       r0: 'Continente', r1: 'Açores', r2: 'Madeira', unit: ' sismos',
-      s1d: 'Dia', s1w: 'Semana', s1mo: 'Mês', s1y: 'Ano', mag: 'Magnitude', region: 'Região',
+      s1d: 'Dia', s1w: 'Semana', s1mo: 'Mês', s1y: 'Ano', mag: 'Magnitude', region: 'Região', regionShort: 'Zona',
       jump: 'Ir para…', jumpShort: 'Ir…', latest: 'Mais recente', largest: 'Maiores sismos', decades: 'Décadas', decade: (d) => `Anos ${d}`,
       first: 'Primeiro sismo registado', data: 'Dados:', utc: 'Horas em UTC',
       aSpans: 'Tempo por linha', aMag: 'Magnitude mínima', aJump: 'Ir para', aTheme: 'Alternar entre claro e escuro',
@@ -375,14 +439,18 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
         <p>Todos os sismos registados em Portugal continental, nos Açores e na Madeira desde ${y}, desenhados como num tambor de sismógrafo.</p>
         <ul>
           <li>A linha mais recente está em cima. Cada linha cobre o intervalo que escolher, de 3 horas a um ano, e lê-se da esquerda para a direita. O ponto vermelho é o momento atual.</li>
-          <li>Cada onda é uma ilustração gerada a partir da magnitude de um sismo: quanto mais alta e comprida, mais forte. As ondas esbatidas não têm magnitude registada.</li>
+          <li>Cada onda é uma ilustração gerada a partir da magnitude de um sismo: quanto mais alta e comprida, mais forte. As ondas esbatidas e os pontos vazios no mapa não têm magnitude registada.</li>
           <li>Use a lista para consultar cada sismo. Clique num sismo para ver os detalhes, um mapa e uma ligação para partilhar. Com o teclado, use ← / → no tambor ou ↑ / ↓ na lista para saltar entre sismos.</li>
           <li>Antes da década de 1960 só se registavam os sismos grandes, por isso as linhas mais antigas parecem calmas.</li>
+          <li>O mapa usa enquadramentos fixos para o Continente, os Açores e a Madeira, cada um com a sua escala. Os círculos exteriores representam a magnitude de forma simbólica; a intensidade sentida aparece nos detalhes quando é comunicada. Escolha um período ou traga o período visível do tambor ou da lista. As ligações do mapa preservam as datas exatas em UTC.</li>
           <li>As magnitudes estão em escalas diferentes (ML, mb, Ms, Mw). Usa-se a magnitude do IPMA sempre que o IPMA a publicou.</li>
         </ul>
-        <p class="fine">Dados do IPMA, do boletim do ISC, do EMSC e do USGS. Os sismos novos chegam em direto do EMSC e são preliminares até os catálogos os confirmarem. Contornos do mapa: Natural Earth.</p>
+        <p class="fine">Dados do IPMA, do boletim do ISC, do EMSC e do USGS. Os sismos novos chegam em direto do EMSC e são preliminares até os catálogos os confirmarem. Contornos do mapa: Natural Earth; limites de placas: Bird (2003), conversão de Hugo Ahlenius, Nordpil.</p>
         <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Descarregar os dados</a> (CSV, uso não comercial livre, com referência às fontes)</p>`,
-      aView: 'Vista', vDrum: 'Sismógrafo', vList: 'Lista', cTime: 'Hora (UTC)', cPlace: 'Local', cDepth: 'Profundidade',
+      aView: 'Vista', vDrum: 'Sismógrafo', vList: 'Lista', vMap: 'Mapa', cTime: 'Hora (UTC)', cPlace: 'Local', cDepth: 'Profundidade',
+      lSizes: 'Magnitude 2, 4 e 6', lPlate: 'Limite de placas',
+      aPeriod: 'Período do mapa', p7d: '7d', p30d: '30d', p1y: '1a', pView: 'Vista',
+      aRegionMap: (r, n) => `${r}: ${n} sismos no mapa. Selecione um ponto ou use as setas esquerda e direita para selecionar sismos.`,
       prelimShort: 'preliminar', none: 'Nenhum sismo corresponde a estes filtros.',
       aList: 'Sismos, do mais recente para o mais antigo. As setas para cima e para baixo selecionam o sismo seguinte ou anterior.',
       aRail: 'Cronologia, o mais recente em cima. Clique ou arraste para viajar no tempo.', aMap: 'Mapa com o local do sismo',
@@ -484,9 +552,10 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   let hover = -1, pinned = -1, pinnedId = null, raf = 0, C = {};
   let navigationTime = null; // retain an explicit destination through asynchronous loads and resizes
   // the same earthquakes as a table: 'drum' or 'list'
-  let view = pref('seis.view') === 'list' ? 'list' : 'drum';
+  let view = ['list', 'map'].includes(pref('seis.view')) ? pref('seis.view') : 'drum';
   const listBox = $('#list'), rowsEl = $('#rows');
-  const scroller = () => (view === 'list' ? listBox : drum);
+  const atlas = $('#atlas');
+  const scroller = () => (view === 'map' ? atlas : view === 'list' ? listBox : drum);
 
   /* ---------- rows ---------- */
   function rowAbs(ts) {
@@ -716,7 +785,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     ROWH = narrow ? 18 : 20;
     G = narrow ? 44 : 64;
     dpr = window.devicePixelRatio || 1;
-    if (view === 'list') { // only the rail is a canvas here
+    if (view !== 'drum') {
       railCv.width = Math.round(railBox.clientWidth * dpr);
       railCv.height = Math.round(railBox.clientHeight * dpr);
       return;
@@ -739,12 +808,18 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   const vTop = () => (maxScroll > 0 ? (drum.scrollTop / maxScroll) * maxTop : 0);
   const setVTop = (v) => {
     if (v <= 0 || !Number.isFinite(v)) navigationTime = null;
+    if (view === 'map') {
+      if (v <= 0) chooseMapPeriod(MAP_PERIODS[mapPeriod] ? mapPeriod : '24h');
+      else moveMapTo(FIRST);
+      return;
+    }
     if (view === 'list') { renderList(); listBox.scrollTop = v <= 0 ? 0 : listBox.scrollHeight; schedule(); writeHash(); return; }
     drum.scrollTop = maxTop > 0 ? (Math.max(0, Math.min(maxTop, v)) / maxTop) * maxScroll : 0;
   };
   const yOf = (j, vt) => PADT + j * ROWH + ROWH / 2 - vt;
 
   function centerTime() {
+    if (view === 'map') return (mapFrom + mapTo) / 2;
     if (navigationTime != null) return navigationTime;
     if (view === 'list') return listRowTime(Math.floor((listBox.scrollTop + Math.max(0, listBox.clientHeight - LHEAD) / 3) / LROW));
     const vt = vTop();
@@ -754,6 +829,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   }
   function scrollToTime(t, align) {
     navigationTime = t;
+    if (view === 'map') { if (t < mapFrom || t > mapTo) moveMapTo(t); return; }
     if (view === 'list') {
       t = Math.max(FIRST, Math.min(END, t));
       const request = ++listJump;
@@ -775,7 +851,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   /** Move the end of the record (the pen) forward, keeping the view where it was. */
   function setEnd(t) {
     if (t <= END) return;
-    if (view === 'list') { END = t; setupRows(); listDirty = true; schedule(); return; }
+    if (view !== 'drum') { END = t; setupRows(); listDirty = true; schedule(); return; }
     const before = nRows, atTop = drum.scrollTop === 0, vt = vTop();
     END = t; setupRows();
     if (nRows !== before) {
@@ -794,6 +870,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
 
   function draw() {
     raf = 0;
+    if (view === 'map') { renderMap(); return; }
     if (view === 'list') { renderList(); return; }
     if (!W || !viewH) return;
     const vt = vTop();
@@ -989,7 +1066,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     tipFor = e; tipPinned = isPinned; tipAt = at || null;
     tip.classList.toggle('pinned', isPinned);
     tip.hidden = false;
-    tip.classList.toggle('docked', view === 'list'); // no wave to point at: the card sits in a corner
+    tip.classList.toggle('docked', view !== 'drum');
   }
   function hideTip() { tip.hidden = true; tipFor = -1; tipPinned = false; }
   function placeTip(vt) {
@@ -998,7 +1075,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       if (pinned < 0) { tip.style.visibility = 'hidden'; return; }
       if (tipFor !== pinned) showTip(pinned, true);
     }
-    if (view === 'list') { tip.style.visibility = 'visible'; return; }
+    if (view !== 'drum') { tip.style.visibility = 'visible'; return; }
     let x, y;
     if (tipPinned || !tipAt) {
       const p = posOf(tipFor, vt);
@@ -1094,6 +1171,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     cancelJump();
     pinned = e; pinnedId = E[e].id; showTip(e, true);
     if (view === 'list') keepListEventVisible(e);
+    if (view === 'map') mapScrollToPinned = true;
     schedule(); writeHash();
   }
   function unpin() { cancelJump(); if (pinned < 0 && !pinnedId) return; pinned = -1; pinnedId = null; hideTip(); schedule(); writeHash(); }
@@ -1104,13 +1182,16 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     clearTimeout(hashTimer);
     if (!booted) return;
     const p = [];
-    if (view === 'list') p.push('v=list');
+    if (view !== 'drum') p.push('v=' + view);
+    if (view === 'map') {
+      p.push('from=' + new Date(mapFrom * 1000).toISOString(), 'to=' + new Date(mapTo * 1000).toISOString());
+    }
     if (span !== '3h') p.push('s=' + span);
     if (minMag !== 'all') p.push('m=' + minMag);
     if (region !== 'all') p.push('r=' + region);
     const sharedId = pendingJump ? pendingJump.id : pinnedId;
     if (sharedId && /^\d{8}-/.test(sharedId)) p.push('q=' + sharedId);
-    else if (scroller().scrollTop > 0) p.push('t=' + new Date(centerTime() * 1000).toISOString().slice(0, 19));
+    else if (view !== 'map' && scroller().scrollTop > 0) p.push('t=' + new Date(centerTime() * 1000).toISOString().slice(0, 19));
     const h = p.length ? '#' + p.join('&') : '';
     if (h !== location.hash) history.replaceState(null, '', h || location.pathname + location.search);
   }
@@ -1122,15 +1203,19 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     const m = ['2', '3', '4', '5'].includes(p.get('m')) ? p.get('m') : 'all';
     const r = ['0', '1', '2'].includes(p.get('r')) ? p.get('r') : 'all';
     if (m !== minMag || r !== region) { minMag = m; region = r; magSel.value = m; regSel.value = r; onFilter(); }
-    if ((p.get('v') === 'list' ? 'list' : 'drum') !== view) setView(p.get('v'), false);
+    const nextView = ['list', 'map'].includes(p.get('v')) ? p.get('v') : 'drum';
+    if (nextView !== view) setView(nextView, false);
     if (s !== span) setSpan(s);
+    const from = parseMapDate(p.get('from')), to = parseMapDate(p.get('to'));
+    const mapDates = view === 'map' && Number.isFinite(from) && Number.isFinite(to) && to > from;
+    if (mapDates) setMapRange(from, to, null, true);
     const q = p.get('q') || '', time = p.get('t') || '';
     const ts = /^\d{4}-\d{2}-\d{2}T\d{2}(?::\d{2}){0,2}$/.test(time)
       ? Date.parse(time + (time.length === 13 ? ':00:00Z' : time.length === 16 ? ':00Z' : 'Z')) / 1000 : NaN;
     const qt = Date.UTC(+q.slice(0, 4), +q.slice(4, 6) - 1, +q.slice(6, 8), 12) / 1000;
     if (/^\d{8}-\w+$/.test(q) && Number.isFinite(qt)) jumpTo(qt, q);
     else if (Number.isFinite(ts)) { unpin(); scrollToTime(ts, 'center'); }
-    else { unpin(); setVTop(0); }
+    else { unpin(); if (!mapDates) setVTop(0); }
     schedule(); writeHash();
   }
   window.addEventListener('hashchange', applyHash);
@@ -1140,7 +1225,9 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   function railJump(ev) {
     const r = railBox.getBoundingClientRect();
     const f = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height));
-    scrollToTime(END - f * (END - startAbs(base)), 'center');
+    mapContextDirty = true;
+    const t = END - f * (END - startAbs(base));
+    if (view === 'map') moveMapTo(t); else scrollToTime(t, 'center');
   }
   railBox.addEventListener('pointerdown', (ev) => { railDrag = true; railBox.setPointerCapture(ev.pointerId); railJump(ev); });
   railBox.addEventListener('pointermove', (ev) => { if (railDrag) railJump(ev); });
@@ -1149,7 +1236,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   railBox.addEventListener('keydown', (ev) => {
     const yr = 365.25 * 86400, c = centerTime();
     const d = { ArrowUp: yr, ArrowDown: -yr, PageUp: 10 * yr, PageDown: -10 * yr }[ev.key];
-    if (d) { ev.preventDefault(); scrollToTime(Math.min(END, c + d), 'center'); }
+    if (d) { ev.preventDefault(); mapContextDirty = true; if (view === 'map') moveMapTo(Math.min(END, c + d)); else scrollToTime(Math.min(END, c + d), 'center'); }
     if (ev.key === 'Home') { ev.preventDefault(); setVTop(0); }
     if (ev.key === 'End') { ev.preventDefault(); setVTop(Infinity); }
   });
@@ -1164,7 +1251,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     if (atTop || tc == null) setVTop(0); else scrollToTime(tc, 'center');
     schedule();
   }
-  document.querySelectorAll('#spans button').forEach((b) => b.addEventListener('click', () => setSpan(b.dataset.span)));
+  document.querySelectorAll('#spans button').forEach((b) => b.addEventListener('click', () => { mapContextDirty = true; setSpan(b.dataset.span); }));
 
   const magSel = $('#mag'), regSel = $('#region'), jumpSel = $('#jump');
   magSel.value = minMag; if (magSel.value !== minMag) { minMag = 'all'; magSel.value = 'all'; }
@@ -1194,6 +1281,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   }
   function compactControls() {
     magSel.options[0].textContent = innerWidth <= 600 ? 'M' : L.mag;
+    regSel.options[0].textContent = innerWidth <= 360 ? L.regionShort : L.region;
     jumpSel.options[0].textContent = innerWidth <= 600 ? L.jumpShort : L.jump;
   }
   let jumpRequest = 0, pendingJump = null;
@@ -1227,6 +1315,255 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
         cancelJump(); writeHash();
       }
     });
+  }
+
+  /* ---------- maps: fixed regional frames, using the bundled coastlines ---------- */
+  const MAP_PERIODS = { '24h': 86400, '7d': 7 * 86400, '30d': 30 * 86400, '1y': 365 * 86400 };
+  const MAP_BOUNDS = [[-13.2, -5.8, 35.2, 42.4], [-33, -23.4, 35.4, 41.4], [-18.4, -15.1, 29.4, 34.1]];
+  let mapPeriod = MAP_PERIODS[pref('seis.mapPeriod')] ? pref('seis.mapPeriod') : '24h';
+  let mapTo = Date.now() / 1000, mapFrom = mapTo - MAP_PERIODS[mapPeriod], mapLive = mapPeriod;
+  let mapContextRange = null, mapVisited = false, mapContextDirty = false, mapScrollToPinned = false;
+  const mapPlots = [...document.querySelectorAll('.map-panel')].map((panel, r) => ({
+    panel, r, canvas: panel.querySelector('canvas'), count: panel.querySelector('.map-count'), points: [], indices: [],
+  }));
+  const parseMapDate = (s) => /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{3})?Z$/.test(s || '') ? Date.parse(s) / 1000 : NaN;
+  function visibleTimeRange() {
+    if (view === 'map') return [mapFrom, mapTo];
+    if (view === 'list') {
+      const a = Math.floor(listBox.scrollTop / LROW);
+      const b = Math.max(a, Math.ceil((listBox.scrollTop + listBox.clientHeight - LHEAD) / LROW) - 1);
+      return [listRowTime(b), listRowTime(a)];
+    }
+    const vt = vTop(), last = lastRow();
+    const a = Math.max(0, Math.min(nRows - 1, Math.floor((vt - PADT) / ROWH)));
+    const b = Math.max(a, Math.min(nRows - 1, Math.floor((vt + viewH - PADT) / ROWH)));
+    return [Math.max(FIRST, startAbs(last - b)), Math.min(END, startAbs(last - a + 1))];
+  }
+  function mapControls() {
+    document.querySelectorAll('#periods button').forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.period === mapPeriod));
+      if (button.dataset.period === 'view') button.hidden = !mapContextRange;
+    });
+  }
+  function setMapRange(a, b, live = null, context = false) {
+    mapFrom = a; mapTo = b; mapLive = live;
+    mapPeriod = live || 'view';
+    if (context) mapContextRange = [a, b];
+    if (mapPeriod === 'view' && !mapContextRange) mapContextRange = [a, b];
+    if (pinned >= 0 && (T[pinned] < a || T[pinned] > b)) unpin();
+    mapControls(); schedule(); writeHash();
+  }
+  function chooseMapPeriod(period) {
+    cancelJump();
+    if (period === 'view' && mapContextRange) { setMapRange(...mapContextRange, null, true); return; }
+    if (!MAP_PERIODS[period]) period = '24h';
+    const end = Math.max(END, Date.now() / 1000);
+    setMapRange(end - MAP_PERIODS[period], end, period);
+    pref('seis.mapPeriod', period);
+  }
+  function moveMapTo(t) {
+    const duration = mapTo - mapFrom;
+    const end = Math.max(END, Date.now() / 1000);
+    const b = Math.min(end, Math.max(FIRST + duration, t + duration / 2));
+    setMapRange(b - duration, b, null, true);
+  }
+  document.querySelectorAll('#periods button').forEach((button) => button.addEventListener('click', () => chooseMapPeriod(button.dataset.period)));
+
+  // Detailed geography for the map (tools/build_map.py): land with its neighbours, plate boundaries
+  // and labels. It is a separate file, fetched the first time the map is shown.
+  let GEO = null, geoAsked = false;
+  function loadGeo() {
+    if (geoAsked) return;
+    geoAsked = true;
+    fetch('map.json')
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((g) => { GEO = g; schedule(); })
+      .catch(() => { setTimeout(() => { geoAsked = false; if (view === 'map') schedule(); }, 30000); });
+  }
+  function drawGeography(c, p, w, h, landFill, faint) {
+    const trace = (flat) => { // flat is [lon, lat, lon, lat, …]; returns false when it lies wholly off the canvas
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      c.beginPath();
+      for (let i = 0; i < flat.length; i += 2) {
+        const x = p.x(flat[i]), y = p.y(flat[i + 1]);
+        if (i) c.lineTo(x, y); else c.moveTo(x, y);
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      }
+      if (x1 < 0 || x0 > w || y1 < 0 || y0 > h) return false;
+      if (x1 - x0 < 2 && y1 - y0 < 2) { c.beginPath(); c.arc((x0 + x1) / 2, (y0 + y1) / 2, 1, 0, 2 * Math.PI); } // an islet stays visible
+      return true;
+    };
+    for (const [portugal, ring] of GEO.land) { // neighbours first, Portugal on top
+      if (!trace(ring)) continue;
+      c.closePath();
+      c.fillStyle = portugal ? landFill : C.grid; c.strokeStyle = portugal ? C.muted : faint; c.lineWidth = portugal ? 0.8 : 1;
+      c.fill(); c.stroke();
+    }
+    c.strokeStyle = C.muted; c.lineWidth = 1; c.globalAlpha = 0.75; c.setLineDash([5, 4]);
+    for (const line of GEO.plates) if (trace(line)) c.stroke();
+    c.setLineDash([]); c.globalAlpha = 1;
+    // labels sit under the earthquakes, with a halo so the coast does not cut through them
+    c.font = `10px ${C.font}`; c.lineJoin = 'round'; c.lineWidth = 3; c.strokeStyle = C.paper; c.fillStyle = C.muted;
+    const placed = []; // labels are listed most important first; one that would overlap an earlier one is left out
+    for (const [kind, lon, lat, en, pt] of GEO.labels) {
+      const x = p.x(lon), y = p.y(lat), text = lang === 'pt' ? pt : en;
+      const tw = c.measureText(text).width, city = kind === 'city';
+      const left = city ? x - 3 : x - tw / 2, top = city ? y - 7 : y - (kind === 'island' ? 9 : 0) - 12;
+      const box = [left - 2, top, left + tw + (city ? 8 : 0) + 2, top + 14];
+      if (box[0] < 4 || box[2] > w - 4 || box[1] < 4 || box[3] > h - 26) continue;
+      if (placed.some((q) => box[0] < q[2] && box[2] > q[0] && box[1] < q[3] && box[3] > q[1])) continue;
+      placed.push(box);
+      if (city) {
+        c.beginPath(); c.arc(x, y, 1.5, 0, 2 * Math.PI); c.fill();
+        c.textAlign = 'left'; c.textBaseline = 'middle';
+        c.strokeText(text, x + 5, y); c.fillText(text, x + 5, y);
+      } else {
+        c.textAlign = 'center'; c.textBaseline = 'bottom';
+        const lift = kind === 'island' ? 9 : 0;
+        c.strokeText(text, x, y - lift); c.fillText(text, x, y - lift);
+      }
+    }
+  }
+
+  function mapProjection(r, w, h) {
+    const [west, east, south, north] = MAP_BOUNDS[r];
+    const cosine = Math.cos((south + north) * Math.PI / 360);
+    const k = Math.max(0.01, Math.min((w - 36) / ((east - west) * cosine), (h - 52) / (north - south)));
+    const ox = (w - (east - west) * cosine * k) / 2;
+    const oy = 8 + (h - 44 - (north - south) * k) / 2;
+    return { k, x: (lon) => ox + (lon - west) * cosine * k, y: (lat) => oy + (north - lat) * k };
+  }
+  const mapRadius = (m) => Number.isNaN(m) ? 2.5 : Math.min(34, 3 + 1.25 * Math.pow(Math.max(0, m), 1.5));
+  function drawMapPanel(plot) {
+    const canvas = plot.canvas, w = canvas.clientWidth, h = canvas.clientHeight;
+    if (!w || !h) return;
+    const ratio = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.round(w * ratio)) canvas.width = Math.round(w * ratio);
+    if (canvas.height !== Math.round(h * ratio)) canvas.height = Math.round(h * ratio);
+    const c = canvas.getContext('2d'), p = mapProjection(plot.r, w, h);
+    c.setTransform(ratio, 0, 0, ratio, 0, 0);
+    c.fillStyle = C.paper; c.fillRect(0, 0, w, h);
+    const css = getComputedStyle(document.documentElement);
+    const landFill = css.getPropertyValue('--fill').trim(), faint = css.getPropertyValue('--line').trim();
+    if (GEO) drawGeography(c, p, w, h, landFill, faint);
+    else { // the detailed geography has not arrived yet: the bundled coastlines stand in
+      c.fillStyle = landFill; c.strokeStyle = C.muted; c.lineWidth = 0.8;
+      for (const [region, land] of LAND) {
+        if (region !== plot.r) continue;
+        const xs = land.map(([lon]) => p.x(lon)), ys = land.map(([, lat]) => p.y(lat));
+        c.beginPath();
+        if (Math.max(...xs) - Math.min(...xs) < 2 && Math.max(...ys) - Math.min(...ys) < 2) c.arc(xs[0], ys[0], 1, 0, 2 * Math.PI);
+        else { c.moveTo(xs[0], ys[0]); for (let i = 1; i < xs.length; i++) c.lineTo(xs[i], ys[i]); c.closePath(); }
+        c.fill(); c.stroke();
+      }
+    }
+    plot.points = plot.indices.map((e) => ({ e, x: p.x(E[e].lon), y: p.y(E[e].lat), radius: mapRadius(MAG[e]) }));
+    const ordered = plot.points.slice().sort((a, b) => (Number.isNaN(MAG[a.e]) ? -1 : MAG[a.e]) - (Number.isNaN(MAG[b.e]) ? -1 : MAG[b.e]));
+    c.fillStyle = C.ink; c.strokeStyle = C.ink; c.lineWidth = 1;
+    for (const point of ordered) {
+      c.beginPath(); c.arc(point.x, point.y, point.radius, 0, 2 * Math.PI);
+      if (Number.isNaN(MAG[point.e])) { c.globalAlpha = 0.6; c.stroke(); }
+      else { c.globalAlpha = 0.1; c.fill(); c.globalAlpha = 0.3; c.stroke(); }
+    }
+    c.globalAlpha = 1;
+    const focused = plot.points.find((point) => point.e === (pinned >= 0 ? pinned : hover));
+    if (focused) {
+      c.fillStyle = C.accent; c.strokeStyle = C.accent; c.globalAlpha = 0.14;
+      c.beginPath(); c.arc(focused.x, focused.y, focused.radius, 0, 2 * Math.PI); c.fill();
+      c.globalAlpha = 0.85; c.lineWidth = 1.2; c.stroke();
+    }
+    // Draw every location above the halos so overlapping symbols keep their precise centres.
+    c.fillStyle = C.ink; c.globalAlpha = 0.9;
+    for (const point of ordered) {
+      if (Number.isNaN(MAG[point.e])) continue;
+      c.beginPath(); c.arc(point.x, point.y, 2, 0, 2 * Math.PI); c.fill();
+    }
+    c.globalAlpha = 1;
+    if (focused && !Number.isNaN(MAG[focused.e])) {
+      c.fillStyle = C.accent; c.beginPath(); c.arc(focused.x, focused.y, 2.5, 0, 2 * Math.PI); c.fill();
+    }
+    // Each frame has its own scale, measured at the frame's middle latitude.
+    const kmPerPixel = 111.195 / p.k, limit = Math.min(90, w / 3) * kmPerPixel;
+    const km = [5, 10, 20, 50, 100, 200, 500].filter((n) => n <= limit).at(-1) || 5;
+    const length = km / kmPerPixel, x = 16, y = h - 16;
+    c.strokeStyle = C.muted; c.fillStyle = C.muted; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(x, y - 4); c.lineTo(x, y); c.lineTo(x + length, y); c.lineTo(x + length, y - 4); c.stroke();
+    c.font = `10px ${C.font}`; c.textAlign = 'left'; c.textBaseline = 'bottom'; c.fillText(`${km} km`, x, y - 6);
+  }
+  function renderMap() {
+    if (!META) return;
+    loadGeo();
+    if (mapLive) {
+      const end = Math.max(END, Date.now() / 1000);
+      if (end !== mapTo) { mapTo = end; mapFrom = end - MAP_PERIODS[mapLive]; writeHash(); }
+    }
+    const waiting = [];
+    for (let y = yearOf(mapFrom); y <= yearOf(mapTo); y++) {
+      if (META.years[y] && yearCounts[y - firstYear] && !CHUNKS.has(y)) { waiting.push(y); ensureYear(y); }
+    }
+    for (const plot of mapPlots) plot.indices = [];
+    for (let e = lowerBound(T, mapFrom); e < N && T[e] <= mapTo; e++) if (mask[e]) mapPlots[REG[e]].indices.push(e);
+    let total = 0;
+    $('#mapPanels').classList.toggle('filtered', region !== 'all');
+    for (const plot of mapPlots) {
+      plot.panel.hidden = region !== 'all' && Number(region) !== plot.r;
+      const n = plot.indices.length; total += n;
+      plot.count.textContent = fmtNum(n);
+      plot.canvas.setAttribute('aria-label', L.aRegionMap(REGION[plot.r], fmtNum(n)));
+      plot.canvas.setAttribute('aria-busy', String(waiting.length > 0));
+      if (!plot.panel.hidden) drawMapPanel(plot);
+    }
+    $('#mapEmpty').hidden = waiting.length > 0 || total > 0;
+    const a = fmtDate(mapFrom), b = fmtDate(mapTo);
+    $('#range').textContent = a === b ? `${a} · ${fmtTime(mapFrom).slice(0, 5)}–${fmtTime(mapTo).slice(0, 5)}` : `${a} – ${b}`;
+    $('#range').title = `${new Date(mapFrom * 1000).toISOString()} – ${new Date(mapTo * 1000).toISOString()}`;
+    const failed = waiting.find((y) => FAILED.has(y));
+    $('#inview').textContent = failed ? L.failedY(failed) : waiting.length ? L.loadingY(waiting[0]) + '…' : L.inView(fmtNum(total));
+    drawRail(mapFrom, mapTo); placeTip(0);
+    if (mapScrollToPinned && pinned >= 0) {
+      mapPlots[REG[pinned]].panel.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      mapScrollToPinned = false;
+    }
+  }
+  function hitMap(plot, x, y, slop) {
+    let best = -1, distance = Infinity, magnitude = -Infinity;
+    for (const point of plot.points) {
+      const d = Math.hypot(point.x - x, point.y - y);
+      const m = Number.isNaN(MAG[point.e]) ? -Infinity : MAG[point.e];
+      if (d <= point.radius + slop && (d < distance || (d === distance && (point.e === pinned || (best !== pinned && m > magnitude))))) {
+        distance = d; best = point.e; magnitude = m;
+      }
+    }
+    return best;
+  }
+  for (const plot of mapPlots) {
+    const canvas = plot.canvas;
+    canvas.addEventListener('mousemove', (event) => {
+      const box = canvas.getBoundingClientRect(), e = hitMap(plot, event.clientX - box.left, event.clientY - box.top, 4);
+      if (hover !== e) { hover = e; schedule(); }
+      canvas.style.cursor = e >= 0 ? 'pointer' : 'crosshair';
+      canvas.title = e >= 0 ? `${Number.isNaN(MAG[e]) ? L.noMag : 'M ' + fmtDec(MAG[e], 1)} · ${placeName(E[e].place) || REGION[plot.r]} · ${fmtDate(T[e])}` : '';
+    });
+    canvas.addEventListener('mouseleave', () => { hover = -1; schedule(); });
+    canvas.addEventListener('click', (event) => {
+      const box = canvas.getBoundingClientRect();
+      const finger = event.pointerType ? event.pointerType !== 'mouse' : matchMedia('(pointer: coarse)').matches;
+      const e = hitMap(plot, event.clientX - box.left, event.clientY - box.top, finger ? 12 : 4);
+      canvas.focus({ preventScroll: true });
+      if (e >= 0 && e !== pinned) pin(e); else unpin();
+    });
+    canvas.addEventListener('keydown', (event) => {
+      const direction = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1, Enter: 0, ' ': 0, Home: 0, End: 0 }[event.key];
+      if (direction === undefined) return;
+      event.preventDefault();
+      const items = plot.indices;
+      let index = items.indexOf(pinned);
+      if (event.key === 'Home') index = 0;
+      else if (event.key === 'End' || index < 0) index = items.length - 1;
+      else index += direction;
+      if (items[index] != null) pin(items[index]);
+    });
+    new ResizeObserver(schedule).observe(canvas);
   }
 
   /* ---------- list view: every matching earthquake as a table, newest first ---------- */
@@ -1367,17 +1704,35 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
 
   /** Switch between the drum and the list, staying at the same moment in time. */
   function setView(v, keep = true) {
-    v = v === 'list' ? 'list' : 'drum';
-    const t = keep && META ? pinned >= 0 ? T[pinned] : scroller().scrollTop > 0 ? centerTime() : null : null;
+    v = ['list', 'map'].includes(v) ? v : 'drum';
+    const source = view;
+    const historical = META && source !== 'map' && scroller().scrollTop > 0;
+    const incoming = keep && v === 'map' && historical && (!mapVisited || mapContextDirty) ? visibleTimeRange() : null;
+    const t = keep && META ? pinned >= 0 ? T[pinned] : source === 'map' || scroller().scrollTop > 0 ? centerTime() : null : null;
     ++listJump;
     view = v; pref('seis.view', v);
     document.querySelectorAll('#views button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
-    drum.hidden = v === 'list'; listBox.hidden = v !== 'list'; $('#spans').hidden = v === 'list';
-    main.classList.toggle('list-view', v === 'list');
+    drum.hidden = v !== 'drum'; listBox.hidden = v !== 'list'; atlas.hidden = v !== 'map';
+    $('#spans').hidden = v !== 'drum'; $('#periods').hidden = v !== 'map';
+    main.classList.toggle('list-view', v !== 'drum');
+    main.classList.toggle('map-view', v === 'map');
     hover = -1; listDirty = true;
     if (pinned >= 0) showTip(pinned, true); else hideTip();
     geometry();
-    if (t != null) scrollToTime(t, 'center'); else setVTop(0);
+    if (v === 'map') {
+      if (incoming) {
+        let [a, b] = incoming;
+        if (b <= a) { a -= 43200; b += 43200; }
+        if (pinned >= 0 && (T[pinned] < a || T[pinned] > b)) { const d = b - a; a = T[pinned] - d / 2; b = a + d; }
+        setMapRange(a, b, null, true);
+      } else if (!mapVisited) chooseMapPeriod(mapPeriod);
+      mapVisited = true; mapContextDirty = false;
+      if (pinned >= 0) mapScrollToPinned = true;
+    } else {
+      $('#range').removeAttribute('title');
+      if (source === 'map') mapContextDirty = false;
+      if (t != null) scrollToTime(t, 'center'); else setVTop(0);
+    }
     schedule(); writeHash();
   }
   document.querySelectorAll('#views button').forEach((b) => b.addEventListener('click', () => { if (b.dataset.view !== view) setView(b.dataset.view); }));
@@ -1396,10 +1751,11 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       esc([Number.isNaN(ev.m) ? L.noMag : `M ${fmtDec(ev.m, 1)}`, placeName(ev.place) || REGION[ev.r], ago(ev.t)].join(' · '));
     el.classList.toggle('new', ev.id === flashId);
   }
-  $('#latest').addEventListener('click', () => { if (latestEv) jumpTo(latestEv.t, latestEv.id); });
+  $('#latest').addEventListener('click', () => { mapContextDirty = true; if (latestEv) jumpTo(latestEv.t, latestEv.id); });
   jumpSel.addEventListener('change', () => {
     const v = jumpSel.value; jumpSel.value = '';
     if (!v || !META) return;
+    mapContextDirty = true;
     unpin();
     if (v === 'latest') { setVTop(0); return; }
     if (v === 'first') {
@@ -1544,7 +1900,10 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   /* ---------- lifecycle ---------- */
   for (const box of [drum, listBox]) {
     for (const type of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
-      box.addEventListener(type, () => { navigationTime = null; }, { passive: true });
+      box.addEventListener(type, (event) => {
+        navigationTime = null;
+        if (type !== 'keydown' || /^(Arrow|Page|Home|End)/.test(event.key)) mapContextDirty = true;
+      }, { passive: true });
     }
   }
   drum.addEventListener('scroll', () => { schedule(); writeHash(); }, { passive: true });

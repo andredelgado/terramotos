@@ -17,7 +17,8 @@ const events = [
 for (let i = 239; i >= 0; i--) {
   const t = NOW.getTime() / 1000 - 3600 - i * 10800;
   const day = new Date(t * 1000).toISOString().slice(0, 10).replaceAll('-', '');
-  events.push({ id: `${day}-${i.toString(16).padStart(4, '0')}`, t, m: i === 0 ? 3.2 : i % 11 === 0 ? null : [1.4, 2.4, 3.2, 4.1][i % 4], r: i % 3, place: i === 0 ? 'Newest earthquake' : `Test earthquake ${i}` });
+  const r = i % 3, sign = i % 2 ? 1 : -1;
+  events.push({ id: `${day}-${i.toString(16).padStart(4, '0')}`, t, m: i === 0 ? 3.2 : i % 11 === 0 ? null : [1.4, 2.4, 3.2, 4.1][i % 4], r, latOffset: i < 8 ? 0 : sign * (r === 2 ? 0.7 : 1), lonOffset: i < 8 ? 0 : sign * (r === 2 ? 0.6 : 2), place: i === 0 ? 'Newest earthquake' : `Test earthquake ${i}` });
 }
 
 const years = {}, counts = {}, chunks = {};
@@ -38,8 +39,8 @@ for (const [year, rows] of Object.entries(chunks)) {
     mt: rows.map((e) => e.m >= 6 ? 2 : 1), mtypes: ['', 'ML', 'MW'],
     ma: rows.map(() => 1), authors: ['', 'IPMA'],
     r: rows.map((e) => e.r), d: rows.map(() => 10),
-    lat: rows.map((e) => Math.round(regions[e.r].lat * 100)),
-    lon: rows.map((e) => Math.round(regions[e.r].lon * 100)),
+    lat: rows.map((e) => Math.round((regions[e.r].lat + (e.latOffset || 0)) * 100)),
+    lon: rows.map((e) => Math.round((regions[e.r].lon + (e.lonOffset || 0)) * 100)),
     p: rows.map((_, i) => i), places: rows.map((e) => e.place),
     s: rows.map(() => 1), k: rows.map(() => ''), felt: [], intensity: [],
   };

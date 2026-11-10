@@ -20,7 +20,7 @@ test('filters load matching years and show an empty state', async ({ page, feed 
   await page.goto('/#v=list&m=5');
   await expect(page.locator('#rows tr[data-e]')).toHaveCount(3);
   await page.locator('#region').selectOption('2');
-  await expect(page.getByText('No earthquakes match these filters.', { exact: true })).toBeVisible();
+  await expect(page.locator('#list').getByText('No earthquakes match these filters.', { exact: true })).toBeVisible();
   await expect(page.locator('#rows tr[data-e]')).toHaveCount(0);
   await page.locator('#region').selectOption('all');
   await expect(page.locator('#rows tr[data-e]')).toHaveCount(3);
