@@ -1,7 +1,11 @@
-# Sismógrafo Portugal
+# Terramotos Portugal
 
 Every recorded earthquake in mainland Portugal, the Azores and Madeira since 1909, drawn as a
 seismograph drum: newest line on top, scroll down to go back in time. New earthquakes appear live.
+
+The page is in English and Portuguese, in light and dark. The address bar always holds a link to
+the current view (`#s=1d&m=3&r=1` for the line length and filters, then `q=` for a pinned
+earthquake or `t=` for a point in time), so any earthquake or moment can be shared.
 
 ## Sources
 

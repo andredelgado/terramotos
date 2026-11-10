@@ -3,35 +3,39 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Sismógrafo Portugal</title>
+<title>Terramotos Portugal</title>
 <meta name="description" content="Every recorded earthquake in mainland Portugal, the Azores and Madeira since 1909, on a seismograph drum. Data from IPMA, the ISC Bulletin, EMSC and USGS.">
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@400;600&display=swap">
+<meta name="theme-color" content="#ffffff">
+<script>
+// apply a saved theme before first paint; without one the system setting decides
+try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (_) {}
+</script>
 <style>
-/* Layout: a helicorder drum filling the screen, newest line on top, with a year rail on the right for travelling back to 1909 */
 :root {
-  --paper: #e4e9e5;
-  --panel: #d8dfda;
-  --ink: #1c2421;
-  --trace: #47524c;
-  --grid: #cbd3ce;
-  --muted: #64706a;
-  --rule: #bfc8c2;
-  --quake: #bf2a1c;
-  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
-  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+  --bg: #fff;
+  --fg: #0a0a0a;
+  --muted: #737373;
+  --line: #e6e6e6;
+  --fill: #f3f3f3;
+  --grid: #f2f2f2;
+  --trace: #bdbdbd;
+  --accent: #e5342b;
+  --shadow: 0 8px 28px rgb(0 0 0 / 0.12);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --paper: #0f1311; --panel: #171c19; --ink: #e1e7e3; --trace: #7b8881; --grid: #212825;
-    --muted: #8a968f; --rule: #2b332f; --quake: #ff5b47; color-scheme: dark;
+    color-scheme: dark;
+    --bg: #000; --fg: #f5f5f5; --muted: #8f8f8f; --line: #262626; --fill: #161616;
+    --grid: #131313; --trace: #4d4d4d; --accent: #ff5146; --shadow: 0 8px 28px rgb(0 0 0 / 0.7);
   }
 }
 :root[data-theme="dark"] {
-  --paper: #0f1311; --panel: #171c19; --ink: #e1e7e3; --trace: #7b8881; --grid: #212825;
-  --muted: #8a968f; --rule: #2b332f; --quake: #ff5b47; color-scheme: dark;
+  color-scheme: dark;
+  --bg: #000; --fg: #f5f5f5; --muted: #8f8f8f; --line: #262626; --fill: #161616;
+  --grid: #131313; --trace: #4d4d4d; --accent: #ff5146; --shadow: 0 8px 28px rgb(0 0 0 / 0.7);
 }
 
 html {
@@ -42,147 +46,162 @@ html {
 body {
   margin: 0; height: 100%; box-sizing: border-box; overflow: hidden;
   display: flex; flex-direction: column;
-  background: var(--paper); color: var(--ink);
-  font-family: var(--f-display); font-size: 15px;
+  background: var(--bg); color: var(--fg);
+  font: 14px/1.4 var(--font); font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 
-.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; padding-block: 14px 10px; }
-.title { min-width: 0; display: grid; gap: 2px; }
-h1 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: 0.005em; line-height: 1.1; text-wrap: balance; }
-h1 .count { font-family: var(--f-mono); font-size: 13px; font-weight: 400; color: var(--muted); letter-spacing: 0; margin-left: 10px; white-space: nowrap; }
-.sub { margin: 0; color: var(--muted); font-size: 14px; max-width: 64ch; }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding-block: 12px; }
+h1 { flex: 1 0 auto; margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; line-height: 32px; white-space: nowrap; }
+h1 .count { font-weight: 400; color: var(--muted); letter-spacing: 0; margin-left: 10px; }
 
-.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
-.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+.controls { display: flex; align-items: center; gap: 8px; }
+button, select { font: 500 13px/1 var(--font); color: var(--fg); margin: 0; }
+.seg { display: inline-flex; background: var(--fill); border-radius: 8px; padding: 2px; }
 .seg button {
-  font: 600 12px/1 var(--f-mono); letter-spacing: 0.02em; color: var(--muted);
-  background: transparent; border: 0; border-left: 1px solid var(--rule); padding: 7px 9px; cursor: pointer;
+  height: 28px; padding: 0 11px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--muted); cursor: pointer; white-space: nowrap;
 }
-.seg button:first-child { border-left: 0; }
-.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
-.seg button:hover:not([aria-pressed="true"]) { color: var(--ink); }
-.field { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.seg button:hover { color: var(--fg); }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
 select {
-  font: 13px var(--f-mono); color: var(--ink); background: var(--paper);
-  border: 1px solid var(--rule); border-radius: 3px; padding: 5px 6px; max-width: 46vw;
+  appearance: none; -webkit-appearance: none;
+  height: 32px; min-width: 0; max-width: 180px; padding: 0 28px 0 10px;
+  border: 1px solid var(--line); border-radius: 8px; cursor: pointer; text-overflow: ellipsis;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23808080' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center;
 }
-button:focus-visible, select:focus-visible, .drum:focus-visible, .rail:focus-visible, a:focus-visible { outline: 2px solid var(--quake); outline-offset: 1px; }
+.icon {
+  flex: none; font-size: 12px; font-weight: 600; width: 32px; height: 32px; padding: 0; display: grid; place-items: center;
+  border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--fg); cursor: pointer;
+}
+select:hover, .icon:hover { border-color: var(--muted); }
+button:focus-visible, select:focus-visible, .drum:focus-visible, .rail:focus-visible, a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 
-.status {
-  display: flex; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap;
-  font: 12px var(--f-mono); color: var(--muted); padding-block: 6px; border-top: 1px solid var(--rule);
-  font-variant-numeric: tabular-nums;
-}
-.status b { color: var(--ink); font-weight: 600; }
+.status { display: flex; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); padding-bottom: 10px; }
+.status b { color: var(--fg); font-weight: 500; }
 .status .right { display: flex; gap: 14px; }
-.live { color: var(--quake); font-weight: 600; }
+.latest {
+  min-width: 0; max-width: 100%; padding: 0; border: 0; background: none; cursor: pointer; text-align: left;
+  font: inherit; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.latest .k { color: var(--muted); margin-right: 6px; }
+.latest:hover { text-decoration: underline; text-underline-offset: 3px; }
+.latest.new { color: var(--accent); }
+.live { color: var(--fg); }
 .live::before {
-  content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-  background: var(--quake); margin-right: 6px; vertical-align: 1px; animation: pulse 2s ease-in-out infinite;
+  content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); margin-right: 6px; vertical-align: 1.5px; animation: pulse 2s ease-in-out infinite;
 }
 @keyframes pulse { 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .live::before { animation: none; } }
 
-main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
-.drum { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; position: relative; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+main { flex: 1; min-height: 0; display: flex; gap: 12px; position: relative; border-top: 1px solid var(--line); }
+.drum { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; position: relative; scrollbar-width: none; }
+.drum::-webkit-scrollbar { display: none; }
 .drum canvas { position: sticky; top: 0; display: block; cursor: crosshair; }
 .rail { flex: none; width: 54px; position: relative; cursor: ns-resize; touch-action: none; }
 .rail canvas { display: block; width: 100%; height: 100%; }
 
 .tip {
-  position: absolute; z-index: 5; width: max-content; max-width: min(300px, 80vw);
-  background: var(--panel); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px;
-  padding: 10px 12px; font: 12px/1.45 var(--f-mono); pointer-events: none;
-  box-shadow: 0 6px 18px rgb(0 0 0 / 0.14);
+  position: absolute; z-index: 5; width: max-content; max-width: min(280px, 80vw);
+  background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; font-size: 13px; line-height: 1.5; pointer-events: none; box-shadow: var(--shadow);
 }
-.tip.pinned { pointer-events: auto; }
-.tip .mag { font: 600 20px/1.1 var(--f-display); }
-.tip .mag small { font: 12px var(--f-mono); color: var(--muted); margin-left: 4px; }
-.tip .where { font-family: var(--f-display); font-size: 14px; margin-top: 4px; }
-.tip .meta, .tip .hint, .tip .src { color: var(--muted); }
-.tip .prelim { color: var(--quake); }
-.tip a { color: var(--quake); display: inline-block; margin-top: 6px; }
-.tip .close { position: absolute; top: 4px; right: 6px; background: none; border: 0; color: var(--muted); font: 16px var(--f-mono); cursor: pointer; padding: 2px 4px; }
-
-.legend {
-  display: flex; flex-wrap: wrap; gap: 6px 20px; align-items: center;
-  font-size: 13px; color: var(--muted); padding-block: 8px 12px; border-top: 1px solid var(--rule);
+.tip.pinned { pointer-events: auto; width: 250px; }
+.tip.pinned .mag { padding-right: 24px; }
+.map { display: block; width: 100%; height: auto; margin-top: 10px; border-radius: 6px; background: var(--fill); }
+.map .land * { fill: var(--bg); stroke: var(--muted); stroke-width: 0.75; stroke-linejoin: round; }
+.map .dot { fill: var(--accent); }
+.map .ring { fill: var(--accent); opacity: 0.2; }
+.tip .links { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; }
+.tip .links a, .tip .links button {
+  margin: 0; padding: 0; border: 0; background: none; cursor: pointer; font: inherit; font-weight: 500;
+  color: var(--fg); text-decoration: underline; text-underline-offset: 3px;
 }
-.legend span { display: inline-flex; align-items: center; gap: 6px; }
-.legend svg { flex: none; }
-.legend .faded { opacity: 0.45; }
-.legend .note { flex-basis: 100%; }
+.tip .mag { font-size: 20px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; }
+.tip .mag small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+.tip .where { font-weight: 500; margin-top: 6px; }
+.tip .meta, .tip .src { color: var(--muted); font-size: 12px; }
+.tip .prelim { color: var(--accent); font-size: 12px; }
+.tip .close {
+  position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px;
+  background: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer;
+}
+.tip .close:hover { background: var(--fill); color: var(--fg); }
 
-@media (max-width: 640px) {
-  h1 { font-size: 22px; }
-  h1 .count { display: block; margin: 4px 0 0; }
-  .sub { font-size: 13px; }
+footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2px 16px; font-size: 12px; color: var(--muted); padding-block: 10px; border-top: 1px solid var(--line); }
+footer a { color: inherit; text-decoration: none; }
+footer a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 1100px) {
+  .controls { order: 3; flex: 1 1 100%; min-width: 0; flex-wrap: wrap; }
+}
+@media (max-width: 600px) {
+  h1 .unit { display: none; }
+  .seg { flex: 1 1 100%; }
+  .seg button { flex: 1; padding: 0; }
+  select { flex: 1 1 0; max-width: none; }
   .rail { width: 40px; }
-  .legend { font-size: 12px; }
+  main { gap: 8px; }
 }
 </style>
 </head>
 <body>
 
 <header class="top">
-  <div class="title">
-    <h1>Sismógrafo Portugal<span class="count"><span id="count">…</span> earthquakes</span></h1>
-    <p class="sub">Every recorded earthquake in mainland Portugal, the Azores and Madeira <span id="since">since 1909</span>. Newest line on top; <span id="lineSentence">each line is 3 hours</span>, read left to right.</p>
-  </div>
+  <h1>Terramotos Portugal<span class="count"><span id="count"></span><span class="unit" data-i18n="unit"> earthquakes</span></span></h1>
   <div class="controls">
-    <div class="seg" role="group" aria-label="Time per line" id="spans">
-      <button type="button" data-span="3h" aria-pressed="true">3 h</button>
-      <button type="button" data-span="1d" aria-pressed="false">Day</button>
-      <button type="button" data-span="1w" aria-pressed="false">Week</button>
-      <button type="button" data-span="1mo" aria-pressed="false">Month</button>
-      <button type="button" data-span="1y" aria-pressed="false">Year</button>
+    <div class="seg" role="group" aria-label="Time per line" data-i18n-aria="aSpans" id="spans">
+      <button type="button" data-span="3h" aria-pressed="true">3h</button>
+      <button type="button" data-span="1d" aria-pressed="false" data-i18n="s1d">Day</button>
+      <button type="button" data-span="1w" aria-pressed="false" data-i18n="s1w">Week</button>
+      <button type="button" data-span="1mo" aria-pressed="false" data-i18n="s1mo">Month</button>
+      <button type="button" data-span="1y" aria-pressed="false" data-i18n="s1y">Year</button>
     </div>
-    <label class="field">Mag
-      <select id="mag">
-        <option value="all">All</option>
-        <option value="2">≥ 2</option>
-        <option value="3">≥ 3</option>
-        <option value="4">≥ 4</option>
-        <option value="5">≥ 5</option>
-      </select>
-    </label>
-    <label class="field">Region
-      <select id="region">
-        <option value="all">All</option>
-        <option value="0">Mainland</option>
-        <option value="1">Azores</option>
-        <option value="2">Madeira</option>
-      </select>
-    </label>
-    <select id="jump" aria-label="Jump to">
+    <select id="mag" aria-label="Minimum magnitude" data-i18n-aria="aMag">
+      <option value="all" data-i18n="mag">Magnitude</option>
+      <option value="2">M 2+</option>
+      <option value="3">M 3+</option>
+      <option value="4">M 4+</option>
+      <option value="5">M 5+</option>
+    </select>
+    <select id="region" aria-label="Region" data-i18n-aria="region">
+      <option value="all" data-i18n="region">Region</option>
+      <option value="0" data-i18n="r0">Mainland</option>
+      <option value="1" data-i18n="r1">Azores</option>
+      <option value="2" data-i18n="r2">Madeira</option>
+    </select>
+    <select id="jump" aria-label="Jump to" data-i18n-aria="aJump">
       <option value="">Jump to…</option>
     </select>
   </div>
+  <button class="icon" id="lang" type="button"></button>
+  <button class="icon" id="theme" type="button" aria-label="Switch between light and dark" data-i18n-aria="aTheme">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z" fill="currentColor"/></svg>
+  </button>
 </header>
 
 <div class="status">
-  <span id="range">Loading earthquakes…</span>
-  <span class="right"><span id="freshness" aria-live="polite"></span><span id="inview"></span></span>
+  <button class="latest" id="latest" type="button" hidden></button>
+  <span class="right"><span id="range"></span><span id="freshness" aria-live="polite"></span><span id="inview"></span></span>
 </div>
 
 <main>
-  <div class="drum" id="drum" tabindex="0" aria-label="Seismograph drum. Each line is a slice of time; red waves are earthquakes. Scroll down to go back in time.">
+  <div class="drum" id="drum" tabindex="0" data-i18n-aria="aDrum" aria-label="Seismograph drum. Each line is a slice of time, newest on top; the waves are earthquakes. Scroll down to go back in time.">
     <canvas id="drumCanvas"></canvas>
     <div id="spacer"></div>
   </div>
-  <div class="rail" id="railBox" tabindex="0" role="slider" aria-label="Timeline, newest at the top. Click or drag to travel in time." aria-valuemin="1909" aria-valuemax="2026" aria-valuenow="2026">
+  <div class="rail" id="railBox" tabindex="0" role="slider" data-i18n-aria="aRail" aria-label="Timeline, newest at the top. Click or drag to travel in time." aria-valuemin="1909" aria-valuemax="2026" aria-valuenow="2026">
     <canvas id="rail"></canvas>
   </div>
   <div class="tip" id="tip" hidden></div>
 </main>
 
-<footer class="legend">
-  <span><svg width="34" height="14" viewBox="0 0 34 14" aria-hidden="true"><path d="M0 7h6l1-1 1 2 1-1h2l1-5 1 10 1-8 1 6 1-4 1 3 1-2 1 1h12" fill="none" stroke="var(--quake)" stroke-width="1.2"/></svg>Earthquake: taller and longer means stronger</span>
-  <span class="faded"><svg width="34" height="14" viewBox="0 0 34 14" aria-hidden="true"><path d="M0 7h8l1-2 1 4 1-3 1 2 1-1h21" fill="none" stroke="var(--quake)" stroke-width="1.2"/></svg>No magnitude on record</span>
-  <span>Lines start at 00:00 UTC</span>
-  <span class="note" id="dataNote">Data: IPMA, ISC Bulletin, EMSC and USGS; new earthquakes appear live from the EMSC feed. IPMA's magnitude is used wherever IPMA reported one. Before the 1960s only large earthquakes were recorded, so older lines look quiet.</span>
+<footer>
+  <span><span data-i18n="data">Data:</span> <a href="https://www.ipma.pt/pt/geofisica/sismicidade/" target="_blank" rel="noopener">IPMA</a>, <a href="https://www.isc.ac.uk/" target="_blank" rel="noopener">ISC</a>, <a href="https://www.seismicportal.eu/" target="_blank" rel="noopener">EMSC</a>, <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS</a></span>
+  <span data-i18n="utc">Times in UTC</span>
 </footer>
 
 <script>
@@ -197,16 +216,67 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
   const EMSC_WS = 'wss://www.seismicportal.eu/standing_order/websocket';
   const META_POLL = 120000;                    // ms between checks for new site data
   const MATCH_S = 30, MATCH_KM = 100;          // same earthquake: this close in time and place
-  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const REGION = ['Mainland', 'Azores', 'Madeira'];
+  const I18N = {
+    en: {
+      loc: 'en-GB', other: 'PT', aLang: 'Mudar para português',
+      months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+      r0: 'Mainland', r1: 'Azores', r2: 'Madeira', unit: ' earthquakes',
+      s1d: 'Day', s1w: 'Week', s1mo: 'Month', s1y: 'Year', mag: 'Magnitude', region: 'Region',
+      jump: 'Jump to…', latest: 'Latest', largest: 'Largest earthquakes', decades: 'Decades', decade: (d) => `${d}s`,
+      first: 'First earthquake on record', data: 'Data:', utc: 'Times in UTC',
+      aSpans: 'Time per line', aMag: 'Minimum magnitude', aJump: 'Jump to', aTheme: 'Switch between light and dark',
+      aDrum: 'Seismograph drum. Each line is a slice of time, newest on top; the waves are earthquakes. Scroll down to go back in time.',
+      aRail: 'Timeline, newest at the top. Click or drag to travel in time.', aMap: 'Map showing where the earthquake was',
+      loading: 'Loading…', loadingY: (y) => `Loading ${y}`, failedY: (y) => `Couldn't load ${y}, retrying`,
+      inView: (n) => `${n} in view`, loadError: "Couldn't load the data. Reload to try again.",
+      live: 'Live', liveTitle: 'Connected to the EMSC live feed', updated: (a) => `Updated ${a}`,
+      now: 'just now', minAgo: (n) => `${n} min ago`, hAgo: (n) => `${n} h ago`, dAgo: (n) => `${n} days ago`,
+      noMag: 'No magnitude', magBy: (a) => `Magnitude by ${a}`, deep: (d) => `${d} km deep`,
+      felt: 'Felt', feltI: (i) => `Felt, intensity ${i}`, prelim: 'Preliminary · EMSC live feed', source: 'Source:',
+      close: 'Close', copy: 'Copy link', copied: 'Copied', E: 'E', W: 'W',
+      openE: 'Open on EMSC', openI: 'Open in the ISC Bulletin', openU: 'Open on USGS', openP: 'Open IPMA seismicity',
+    },
+    pt: {
+      loc: 'pt-PT', other: 'EN', aLang: 'Switch to English',
+      months: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
+      r0: 'Continente', r1: 'Açores', r2: 'Madeira', unit: ' sismos',
+      s1d: 'Dia', s1w: 'Semana', s1mo: 'Mês', s1y: 'Ano', mag: 'Magnitude', region: 'Região',
+      jump: 'Ir para…', latest: 'Mais recente', largest: 'Maiores sismos', decades: 'Décadas', decade: (d) => `Anos ${d}`,
+      first: 'Primeiro sismo registado', data: 'Dados:', utc: 'Horas em UTC',
+      aSpans: 'Tempo por linha', aMag: 'Magnitude mínima', aJump: 'Ir para', aTheme: 'Alternar entre claro e escuro',
+      aDrum: 'Tambor de sismógrafo. Cada linha é um intervalo de tempo, a mais recente em cima; as ondas são sismos. Desça para recuar no tempo.',
+      aRail: 'Cronologia, o mais recente em cima. Clique ou arraste para viajar no tempo.', aMap: 'Mapa com o local do sismo',
+      loading: 'A carregar…', loadingY: (y) => `A carregar ${y}`, failedY: (y) => `Falha ao carregar ${y}, a tentar de novo`,
+      inView: (n) => `${n} visíveis`, loadError: 'Não foi possível carregar os dados. Recarregue a página.',
+      live: 'Em direto', liveTitle: 'Ligado ao feed em direto do EMSC', updated: (a) => `Atualizado ${a}`,
+      now: 'agora mesmo', minAgo: (n) => `há ${n} min`, hAgo: (n) => `há ${n} h`, dAgo: (n) => `há ${n} dias`,
+      noMag: 'Sem magnitude', magBy: (a) => `Magnitude segundo ${a}`, deep: (d) => `${d} km de profundidade`,
+      felt: 'Sentido', feltI: (i) => `Sentido, intensidade ${i}`, prelim: 'Preliminar · EMSC em direto', source: 'Fonte:',
+      close: 'Fechar', copy: 'Copiar ligação', copied: 'Copiado', E: 'E', W: 'O',
+      openE: 'Abrir no EMSC', openI: 'Abrir no boletim do ISC', openU: 'Abrir no USGS', openP: 'Abrir sismicidade do IPMA',
+    },
+  };
+  // simplified outlines for the locator map: mainland coast and border as [lon, lat],
+  // islands as [region, lon, lat, half-length km, half-width km, tilt in degrees]
+  const MAINLAND = [[-8.87, 41.87], [-8.84, 41.69], [-8.78, 41.4], [-8.68, 41.15], [-8.65, 40.95], [-8.75, 40.64],
+    [-8.87, 40.2], [-9.07, 39.6], [-9.4, 39.36], [-9.42, 39.0], [-9.5, 38.78], [-9.48, 38.7], [-9.24, 38.66],
+    [-9.22, 38.41], [-8.9, 38.48], [-8.78, 38.4], [-8.8, 38.1], [-8.88, 37.95], [-8.8, 37.5], [-8.88, 37.2],
+    [-8.99, 37.02], [-8.67, 37.08], [-8.2, 37.08], [-7.9, 36.97], [-7.6, 37.1], [-7.4, 37.17], [-7.45, 37.55],
+    [-7.25, 38.0], [-6.93, 38.2], [-7.32, 38.44], [-7.0, 38.88], [-6.97, 39.02], [-7.3, 39.4], [-7.53, 39.66],
+    [-6.98, 39.67], [-6.86, 40.0], [-6.8, 40.33], [-6.8, 40.85], [-6.93, 41.03], [-6.19, 41.57], [-6.55, 41.94],
+    [-7.2, 41.88], [-8.13, 41.81], [-8.2, 42.15], [-8.64, 42.03]];
+  const ISLANDS = [[1, -31.11, 39.7, 3, 2, 90], [1, -31.19, 39.44, 8.5, 6, 90], [1, -28.7, 38.58, 10, 7, 0],
+    [1, -28.33, 38.47, 23, 7, -10], [1, -28.03, 38.64, 27, 3.2, -25], [1, -28.02, 39.05, 6, 3.5, -35],
+    [1, -27.22, 38.72, 15, 9, 0], [1, -25.5, 37.79, 31, 6.5, 0], [1, -25.1, 36.97, 8.5, 5, 0],
+    [2, -16.96, 32.75, 28, 10.5, -7], [2, -16.34, 33.07, 5.5, 3, 35], [2, -16.5, 32.52, 6, 0.8, -65], [2, -15.87, 30.14, 1.2, 1, 0]];
   // shift: magnitude units taken off before sizing a wave; stretch: wave length factor.
   // Longer lines pack more earthquakes, so small ones shrink to ticks and big ones still stand out.
   const SPANS = {
-    '3h': { u: 10800, line: 'each line is 3 hours', shift: 0, stretch: 1 },
-    '1d': { u: 86400, line: 'each line is a day', shift: 0.4, stretch: 0.75 },
-    '1w': { u: 604800, line: 'each line is a week', shift: 1, stretch: 0.45 },
-    '1mo': { line: 'each line is a month', shift: 1.6, stretch: 0.28 },
-    '1y': { line: 'each line is a year', shift: 2.4, stretch: 0.14 },
+    '3h': { u: 10800, shift: 0, stretch: 1 },
+    '1d': { u: 86400, shift: 0.4, stretch: 0.75 },
+    '1w': { u: 604800, shift: 1, stretch: 0.45 },
+    '1mo': { shift: 1.6, stretch: 0.28 },
+    '1y': { shift: 2.4, stretch: 0.14 },
   };
   // agency codes used by the ISC, EMSC and USGS for whoever measured the magnitude
   const AGENCY = { LIS: 'IPMA', INMG: 'IPMA', IPMA: 'IPMA', PDA: 'Universidade dos Açores', MDD: 'IGN',
@@ -219,6 +289,9 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
     return null;
   };
 
+  let lang = pref('seis.lang');
+  if (lang !== 'pt' && lang !== 'en') lang = /^pt/i.test(navigator.language || '') ? 'pt' : 'en';
+  let L = I18N[lang], MON = L.months, REGION = [L.r0, L.r1, L.r2];
   let span = SPANS[pref('seis.span')] ? pref('seis.span') : '3h';
   let minMag = pref('seis.mag') || 'all';
   let region = pref('seis.region') || 'all';
@@ -290,7 +363,8 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
   };
   const len = (m) => Math.max(3, (10 + 9 * (Number.isNaN(m) ? 1.5 : Math.max(0, m))) * SPANS[span].stretch);
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const fmtNum = (n) => n.toLocaleString('en-GB');
+  const fmtNum = (n) => n.toLocaleString(L.loc);
+  const fmtDec = (n, d) => n.toLocaleString(L.loc, { minimumFractionDigits: d, maximumFractionDigits: d });
   const yearOf = (t) => new Date(t * 1000).getUTCFullYear();
   const fmtDate = (t) => { const d = new Date(t * 1000); return `${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
   const fmtTime = (t) => new Date(t * 1000).toISOString().slice(11, 19);
@@ -302,10 +376,10 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
   }
   function ago(t) {
     const s = Math.max(0, Date.now() / 1000 - t);
-    if (s < 90) return 'just now';
-    if (s < 5400) return `${Math.round(s / 60)} min ago`;
-    if (s < 172800) return `${Math.round(s / 3600)} h ago`;
-    return `${Math.round(s / 86400)} days ago`;
+    if (s < 90) return L.now;
+    if (s < 5400) return L.minAgo(Math.round(s / 60));
+    if (s < 172800) return L.hAgo(Math.round(s / 3600));
+    return L.dAgo(Math.round(s / 86400));
   }
   function kmBetween(a, b) {
     const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
@@ -342,8 +416,10 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
   function readColors() {
     const cs = getComputedStyle(document.documentElement);
     const v = (n) => cs.getPropertyValue(n).trim();
-    C = { paper: v('--paper'), panel: v('--panel'), ink: v('--ink'), trace: v('--trace'), grid: v('--grid'),
-          muted: v('--muted'), quake: v('--quake'), mono: v('--f-mono') };
+    C = { paper: v('--bg'), ink: v('--fg'), trace: v('--trace'), grid: v('--grid'),
+          muted: v('--muted'), accent: v('--accent'), font: v('--font') };
+    const tc = document.querySelector('meta[name="theme-color"]');
+    if (tc) tc.content = C.paper;
   }
 
   /* ---------- data ---------- */
@@ -414,6 +490,7 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
       cum[e + 1] = cum[e] + mask[e];
     }
     if (pinned >= 0 && !mask[pinned]) unpin();
+    updateLatest();
     schedule();
   }
 
@@ -518,7 +595,7 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
     const fs = G < 60 ? 10 : 11;
     for (let j = jTop; j <= jBot; j++) {
       const [txt, bold] = label(last - j);
-      ctx.font = `${bold ? 600 : 400} ${fs}px ${C.mono}`;
+      ctx.font = `${bold ? 600 : 400} ${fs}px ${C.font}`;
       ctx.fillStyle = bold ? C.ink : C.muted;
       ctx.fillText(txt, x0 - 8, yOf(j, vt));
     }
@@ -542,7 +619,7 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
       ctx.moveTo(x0, y);
       for (let x = x0 + 1; x <= xe; x += 1) { v = 0.55 * v + 0.45 * (r() - 0.5); ctx.lineTo(x, y + v * 3); }
     }
-    ctx.strokeStyle = C.trace; ctx.lineWidth = 0.8; ctx.stroke();
+    ctx.strokeStyle = C.trace; ctx.lineWidth = 0.75; ctx.stroke();
 
     // earthquakes, including a few lines above and below so tall waves spill in
     let inView = 0;
@@ -558,8 +635,8 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
         wave(Number.isNaN(m) ? faint : strong, e, x0 + pw * (T[e] - s) / (en - s), y, amp(m), len(m));
       }
     }
-    ctx.lineWidth = 1; ctx.strokeStyle = C.quake;
-    ctx.globalAlpha = 0.45; ctx.stroke(faint);
+    ctx.lineWidth = 1; ctx.strokeStyle = C.ink;
+    ctx.globalAlpha = 0.4; ctx.stroke(faint);
     ctx.globalAlpha = 1; ctx.stroke(strong);
 
     const focus = pinned >= 0 ? pinned : hover;
@@ -567,14 +644,14 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
       const { x, y } = posOf(focus, vt);
       const p = new Path2D();
       wave(p, focus, x, y, amp(MAG[focus]), len(MAG[focus]));
-      ctx.lineWidth = 2.2; ctx.stroke(p);
-      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fillStyle = C.quake; ctx.fill();
+      ctx.lineWidth = 2; ctx.strokeStyle = C.accent; ctx.stroke(p);
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fillStyle = C.accent; ctx.fill();
     }
     ctx.restore();
 
     if (pen) {
       ctx.beginPath(); ctx.arc(pen[0], pen[1], 3.5, 0, Math.PI * 2);
-      ctx.fillStyle = C.quake; ctx.fill();
+      ctx.fillStyle = C.accent; ctx.fill();
     }
 
     // which years are on screen (plus a little either side); fetch any we don't have yet
@@ -586,8 +663,8 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
       }
       $('#range').innerHTML = `<b>${fmtRange(tA, tB)}</b>`;
       const failed = waiting.filter((y) => FAILED.has(y));
-      $('#inview').textContent = failed.length ? `Couldn't load ${failed[0]}, retrying`
-        : waiting.length ? `Loading ${waiting[0]}${waiting.length > 1 ? '…' : ''}` : `${fmtNum(inView)} in view`;
+      $('#inview').textContent = failed.length ? L.failedY(failed[0])
+        : waiting.length ? L.loadingY(waiting[0]) + (waiting.length > 1 ? '…' : '') : L.inView(fmtNum(inView));
     }
     drawRail(tA, tB);
     placeTip(vt);
@@ -604,7 +681,7 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
     const labelW = rw < 50 ? 18 : 24;
     const barMax = rw - labelW - 2;
 
-    rctx.fillStyle = C.trace; rctx.globalAlpha = 0.55;
+    rctx.fillStyle = C.trace;
     for (let k = 0; k < yearCounts.length; k++) {
       const c = yearCounts[k]; if (!c) continue;
       const y = firstYear + k;
@@ -612,12 +689,11 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
       const w = Math.max(1.5, (Math.log1p(c) / Math.log1p(yearMax)) * barMax);
       rctx.fillRect(rw - w, ya, w, Math.max(1, yb - ya - 0.5));
     }
-    rctx.globalAlpha = 1;
 
     // decade ticks
     const pxPerDecade = (10 * 365.25 * 86400 / spanT) * rh;
     const step = pxPerDecade < 18 ? 20 : 10;
-    rctx.font = `${rw < 50 ? 9 : 10}px ${C.mono}`; rctx.textAlign = 'left'; rctx.textBaseline = 'bottom';
+    rctx.font = `${rw < 50 ? 9 : 10}px ${C.font}`; rctx.textAlign = 'left'; rctx.textBaseline = 'bottom';
     rctx.fillStyle = C.muted; rctx.strokeStyle = C.grid; rctx.lineWidth = 1;
     for (let d = Math.ceil(firstYear / step) * step; d <= y1; d += step) {
       const y = Math.round(tY(Date.UTC(d, 0, 1) / 1000)) + 0.5;
@@ -628,9 +704,9 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
     // where the drum is looking
     const a = tY(tB), b = tY(tA);
     const h = Math.max(3, b - a);
-    rctx.fillStyle = C.quake; rctx.globalAlpha = 0.16; rctx.fillRect(0, a, rw, h);
-    rctx.globalAlpha = 1; rctx.strokeStyle = C.quake; rctx.lineWidth = 1.5;
-    rctx.strokeRect(0.75, a, rw - 1.5, h);
+    rctx.fillStyle = C.ink; rctx.globalAlpha = 0.1; rctx.fillRect(0, a, rw, h);
+    rctx.globalAlpha = 1; rctx.strokeStyle = C.ink; rctx.lineWidth = 1;
+    rctx.strokeRect(0.5, Math.round(a) + 0.5, rw - 1, Math.round(h));
     railBox.setAttribute('aria-valuemin', String(firstYear));
     railBox.setAttribute('aria-valuemax', String(y1));
     railBox.setAttribute('aria-valuenow', String(yearOf(tB)));
@@ -638,27 +714,53 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
 
   /* ---------- tooltip ---------- */
   function linkFor(k) {
-    if (k.startsWith('e:')) return [`https://www.seismicportal.eu/eventdetails.html?unid=${encodeURIComponent(k.slice(2))}`, 'Open on EMSC'];
-    if (k.startsWith('i:')) return [`https://www.isc.ac.uk/cgi-bin/web-db-run?event_id=${encodeURIComponent(k.slice(2))}&out_format=ISF2&request=COMPREHENSIVE`, 'Open in the ISC Bulletin'];
-    if (k.startsWith('u:')) return [`https://earthquake.usgs.gov/earthquakes/eventpage/${encodeURIComponent(k.slice(2))}`, 'Open on USGS'];
-    return ['https://www.ipma.pt/pt/geofisica/sismicidade/', 'Open IPMA seismicity'];
+    if (k.startsWith('e:')) return [`https://www.seismicportal.eu/eventdetails.html?unid=${encodeURIComponent(k.slice(2))}`, L.openE];
+    if (k.startsWith('i:')) return [`https://www.isc.ac.uk/cgi-bin/web-db-run?event_id=${encodeURIComponent(k.slice(2))}&out_format=ISF2&request=COMPREHENSIVE`, L.openI];
+    if (k.startsWith('u:')) return [`https://earthquake.usgs.gov/earthquakes/eventpage/${encodeURIComponent(k.slice(2))}`, L.openU];
+    return ['https://www.ipma.pt/pt/geofisica/sismicidade/', L.openP];
+  }
+  /** A small locator map of the earthquake's region: land outlines and a dot. */
+  function mapSVG(ev) {
+    // frame the region's land (the remote Selvagens aside) together with the earthquake
+    const pts = [[ev.lon, ev.lat]];
+    if (ev.r === 0) pts.push(...MAINLAND);
+    for (const [r, lo, la, a] of ISLANDS) if (r === ev.r && la > 31) pts.push([lo - a / 85, la - a / 111], [lo + a / 85, la + a / 111]);
+    let x0 = 180, x1 = -180, y0 = 90, y1 = -90;
+    for (const [x, y] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    x0 -= 0.3; x1 += 0.3; y0 -= 0.3; y1 += 0.3;
+    const mw = 240, mh = 132, pad = 8, c = Math.cos(((y0 + y1) / 2) * Math.PI / 180);
+    const k = Math.min((mw - 2 * pad) / ((x1 - x0) * c), (mh - 2 * pad) / (y1 - y0)); // px per degree of latitude
+    const ox = (mw - (x1 - x0) * c * k) / 2, oy = (mh - (y1 - y0) * k) / 2;
+    const X = (lon) => ox + (lon - x0) * c * k, Y = (lat) => oy + (y1 - lat) * k;
+    const f = (n) => n.toFixed(1);
+    let land = '';
+    if (ev.r === 0) land = `<path d="M${MAINLAND.map(([lo, la]) => `${f(X(lo))} ${f(Y(la))}`).join('L')}Z"/>`;
+    for (const [r, lo, la, a, b, tilt] of ISLANDS) {
+      if (r !== ev.r) continue;
+      const cx = f(X(lo)), cy = f(Y(la));
+      land += `<ellipse cx="${cx}" cy="${cy}" rx="${f(Math.max(1.2, a * k / 111.2))}" ry="${f(Math.max(1.2, b * k / 111.2))}" transform="rotate(${-tilt} ${cx} ${cy})"/>`;
+    }
+    const px = f(Math.max(5, Math.min(mw - 5, X(ev.lon)))), py = f(Math.max(5, Math.min(mh - 5, Y(ev.lat))));
+    return `<svg class="map" viewBox="0 0 ${mw} ${mh}" role="img" aria-label="${L.aMap}"><g class="land">${land}</g>` +
+      `<circle class="ring" cx="${px}" cy="${py}" r="8"/><circle class="dot" cx="${px}" cy="${py}" r="3"/></svg>`;
   }
   function tipHTML(e, isPinned) {
     const ev = E[e], m = ev.m;
     const src = SOURCES.filter(([b]) => ev.s & b).map(([, n]) => n).join(' · ');
     const link = linkFor(ev.k);
-    const coords = `${Math.abs(ev.lat).toFixed(2)}°${ev.lat >= 0 ? 'N' : 'S'} ${Math.abs(ev.lon).toFixed(2)}°${ev.lon >= 0 ? 'E' : 'W'}`;
-    const meta = [REGION[ev.r], ev.d != null ? `${ev.d} km deep` : null, coords].filter(Boolean).join(' · ');
-    const feltLine = ev.inten ? `Felt, intensity ${ev.inten}` : ev.felt ? 'Felt' : '';
-    return (isPinned ? '<button class="close" type="button" aria-label="Close">×</button>' : '') +
-      `<div class="mag">${Number.isNaN(m) ? 'No magnitude' : `M ${m.toFixed(1)}`}${!Number.isNaN(m) && ev.mt ? `<small>${esc(ev.mt)}</small>` : ''}</div>` +
-      (!Number.isNaN(m) && ev.au ? `<div class="meta">Magnitude by ${esc(AGENCY[ev.au.toUpperCase()] || ev.au)}</div>` : '') +
+    const coords = `${fmtDec(Math.abs(ev.lat), 2)}°${ev.lat >= 0 ? 'N' : 'S'} ${fmtDec(Math.abs(ev.lon), 2)}°${ev.lon >= 0 ? L.E : L.W}`;
+    const meta = [REGION[ev.r], ev.d != null ? L.deep(ev.d) : null, coords].filter(Boolean).join(' · ');
+    const feltLine = ev.inten ? L.feltI(ev.inten) : ev.felt ? L.felt : '';
+    return (isPinned ? `<button class="close" type="button" aria-label="${L.close}">×</button>` : '') +
+      `<div class="mag">${Number.isNaN(m) ? L.noMag : `M ${fmtDec(m, 1)}`}${!Number.isNaN(m) && ev.mt ? `<small>${esc(ev.mt)}</small>` : ''}</div>` +
+      (!Number.isNaN(m) && ev.au ? `<div class="meta">${esc(L.magBy(AGENCY[ev.au.toUpperCase()] || ev.au))}</div>` : '') +
       `<div>${fmtDate(ev.t)} · ${fmtTime(ev.t)} UTC</div>` +
       (ev.place ? `<div class="where">${esc(ev.place)}</div>` : '') +
       (feltLine ? `<div>${esc(feltLine)}</div>` : '') +
       `<div class="meta">${esc(meta)}</div>` +
-      (ev.live ? '<div class="prelim">Preliminary · EMSC live feed</div>' : `<div class="src">Source: ${esc(src)}</div>`) +
-      (isPinned ? `<a href="${link[0]}" target="_blank" rel="noopener">${link[1]} ↗</a>` : '<div class="hint">Click to pin and open details</div>');
+      (ev.live ? `<div class="prelim">${L.prelim}</div>` : `<div class="src">${L.source} ${esc(src)}</div>`) +
+      (isPinned ? mapSVG(ev) + `<div class="links"><a href="${link[0]}" target="_blank" rel="noopener">${link[1]} ↗</a>` +
+        (ev.live ? '' : `<button class="copy" type="button">${L.copy}</button>`) + '</div>' : '');
   }
   let tipFor = -1, tipPinned = false, tipAt = null;
   function showTip(e, isPinned, at) {
@@ -722,10 +824,45 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
     const e = hit(ev.clientX - r.left, ev.clientY - r.top);
     if (e >= 0) pin(e); else unpin();
   });
-  tip.addEventListener('click', (ev) => { if (ev.target.closest('.close')) unpin(); });
+  tip.addEventListener('click', (ev) => {
+    if (ev.target.closest('.close')) { unpin(); return; }
+    const c = ev.target.closest('.copy');
+    if (c && navigator.clipboard) { syncHash(); navigator.clipboard.writeText(location.href).then(() => { c.textContent = L.copied; }, () => {}); }
+  });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') unpin(); });
-  function pin(e) { pinned = e; pinnedId = E[e].id; showTip(e, true); schedule(); }
-  function unpin() { if (pinned < 0 && !pinnedId) return; pinned = -1; pinnedId = null; hideTip(); schedule(); }
+  function pin(e) { pinned = e; pinnedId = E[e].id; showTip(e, true); schedule(); writeHash(); }
+  function unpin() { if (pinned < 0 && !pinnedId) return; pinned = -1; pinnedId = null; hideTip(); schedule(); writeHash(); }
+
+  /* ---------- the view in the URL: #s=span&m=magnitude&r=region, then q=earthquake or t=time ---------- */
+  let booted = false, hashTimer = 0;
+  function syncHash() {
+    clearTimeout(hashTimer);
+    if (!booted) return;
+    const p = [];
+    if (span !== '3h') p.push('s=' + span);
+    if (minMag !== 'all') p.push('m=' + minMag);
+    if (region !== 'all') p.push('r=' + region);
+    if (pinnedId && /^\d{8}-/.test(pinnedId)) p.push('q=' + pinnedId);
+    else if (drum.scrollTop > 0) p.push('t=' + new Date(centerTime() * 1000).toISOString().slice(0, 13));
+    const h = p.length ? '#' + p.join('&') : '';
+    if (h !== location.hash) history.replaceState(null, '', h || location.pathname + location.search);
+  }
+  function writeHash() { clearTimeout(hashTimer); hashTimer = setTimeout(syncHash, 250); }
+  function applyHash() {
+    if (location.hash.length < 2) return;
+    const p = new URLSearchParams(location.hash.slice(1));
+    const s = SPANS[p.get('s')] ? p.get('s') : '3h';
+    const m = ['2', '3', '4', '5'].includes(p.get('m')) ? p.get('m') : 'all';
+    const r = ['0', '1', '2'].includes(p.get('r')) ? p.get('r') : 'all';
+    if (m !== minMag || r !== region) { minMag = m; region = r; magSel.value = m; regSel.value = r; onFilter(); }
+    if (s !== span) setSpan(s);
+    const q = p.get('q') || '', ts = Date.parse((p.get('t') || '') + ':00Z') / 1000;
+    const qt = Date.UTC(+q.slice(0, 4), +q.slice(4, 6) - 1, +q.slice(6, 8), 12) / 1000;
+    if (/^\d{8}-\w+$/.test(q) && Number.isFinite(qt)) { if (q !== pinnedId) jumpTo(qt, q); }
+    else if (Number.isFinite(ts)) { unpin(); scrollToTime(ts, 'center'); }
+    else { unpin(); setVTop(0); }
+  }
+  window.addEventListener('hashchange', applyHash);
 
   /* ---------- rail ---------- */
   let railDrag = false;
@@ -750,9 +887,8 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
   function setSpan(s) {
     const tc = META ? centerTime() : null;
     const atTop = drum.scrollTop === 0;
-    span = s; pref('seis.span', s);
+    span = s; pref('seis.span', s); writeHash();
     document.querySelectorAll('#spans button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.span === s)));
-    $('#lineSentence').textContent = SPANS[s].line;
     setupRows(); geometry();
     if (atTop || tc == null) setVTop(0); else scrollToTime(tc, 'center');
     schedule();
@@ -762,18 +898,18 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
   const magSel = $('#mag'), regSel = $('#region'), jumpSel = $('#jump');
   magSel.value = minMag; if (magSel.value !== minMag) { minMag = 'all'; magSel.value = 'all'; }
   regSel.value = region; if (regSel.value !== region) { region = 'all'; regSel.value = 'all'; }
-  const onFilter = () => { applyMask(); applyCounts(); };
+  const onFilter = () => { applyMask(); applyCounts(); writeHash(); };
   magSel.addEventListener('change', () => { minMag = magSel.value; pref('seis.mag', minMag); onFilter(); });
   regSel.addEventListener('change', () => { region = regSel.value; pref('seis.region', region); onFilter(); });
 
   function buildJump() {
-    let html = '<option value="">Jump to…</option><option value="latest">Latest</option><optgroup label="Largest earthquakes">';
+    let html = `<option value="">${L.jump}</option><option value="latest">${L.latest}</option><optgroup label="${L.largest}">`;
     META.largest.slice(0, 10).forEach((q, i) => {
-      html += `<option value="L:${i}">M${q.m.toFixed(1)} · ${fmtDate(q.t)} · ${esc(q.place || REGION[q.r])}</option>`;
+      html += `<option value="L:${i}">M ${fmtDec(q.m, 1)} · ${fmtDate(q.t)} · ${esc(q.place || REGION[q.r])}</option>`;
     });
-    html += '</optgroup><optgroup label="Decades">';
-    for (let d = Math.floor(yearOf(END) / 10) * 10; d >= Math.floor(firstYear / 10) * 10; d -= 10) html += `<option value="d:${d}">${d}s</option>`;
-    jumpSel.innerHTML = html + '</optgroup><option value="first">First earthquake on record</option>';
+    html += `</optgroup><optgroup label="${L.decades}">`;
+    for (let d = Math.floor(yearOf(END) / 10) * 10; d >= Math.floor(firstYear / 10) * 10; d -= 10) html += `<option value="d:${d}">${L.decade(d)}</option>`;
+    jumpSel.innerHTML = html + `</optgroup><option value="first">${L.first}</option>`;
   }
   function jumpTo(t, id) {
     scrollToTime(t, 'center');
@@ -785,9 +921,25 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
         minMag = 'all'; region = 'all'; magSel.value = 'all'; regSel.value = 'all';
         pref('seis.mag', 'all'); pref('seis.region', 'all'); onFilter();
       }
-      scrollToTime(t, 'center'); pin(e);
+      scrollToTime(E[e].t, 'center'); pin(e);
     });
   }
+
+  /* ---------- latest earthquake ---------- */
+  let latestEv = null, flashId = null;
+  function updateLatest() {
+    const el = $('#latest');
+    latestEv = null;
+    const newest = META ? Math.max(...Object.keys(META.years).map(Number)) : 0;
+    if (CHUNKS.has(newest)) for (let e = N - 1; e >= 0; e--) if (mask[e]) { latestEv = E[e]; break; }
+    el.hidden = !latestEv;
+    if (!latestEv) return;
+    const ev = latestEv;
+    el.innerHTML = `<span class="k">${L.latest}</span>` +
+      esc([Number.isNaN(ev.m) ? L.noMag : `M ${fmtDec(ev.m, 1)}`, ev.place || REGION[ev.r], ago(ev.t)].join(' · '));
+    el.classList.toggle('new', ev.id === flashId);
+  }
+  $('#latest').addEventListener('click', () => { if (latestEv) jumpTo(latestEv.t, latestEv.id); });
   jumpSel.addEventListener('change', () => {
     const v = jumpSel.value; jumpSel.value = '';
     if (!v || !META) return;
@@ -809,9 +961,9 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
   /* ---------- live: EMSC feed + fresh site data ---------- */
   function showFreshness() {
     const el = $('#freshness');
-    if (liveOn) { el.className = 'live'; el.textContent = 'Live'; el.title = 'Connected to the EMSC live feed'; return; }
+    if (liveOn) { el.className = 'live'; el.textContent = L.live; el.title = L.liveTitle; return; }
     el.className = ''; el.title = '';
-    el.textContent = META ? `Updated ${ago(Date.parse(META.generated) / 1000)}` : '';
+    el.textContent = META ? L.updated(ago(Date.parse(META.generated) / 1000)) : '';
   }
 
   let ws = null, wsTries = 0, wsEverOpen = false;
@@ -840,6 +992,7 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
     const r = regionOf(lat, lon);
     if (r < 0 || t < Date.now() / 1000 - 3 * 86400) return;
     const id = 'emsc-' + unid;
+    if (!LIVE.has(unid)) { flashId = id; setTimeout(() => { if (flashId === id) { flashId = null; updateLatest(); } }, 12000); }
     const place = String(p.flynn_region || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
     LIVE.set(unid, {
       id, t, m: p.mag == null ? NaN : Number(p.mag), mt: String(p.magtype || '').toUpperCase(), au: p.auth || 'EMSC',
@@ -860,7 +1013,6 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
     if (first) { END = Math.max(gen, FIRST + 1); setupRows(); geometry(); setVTop(0); }
     else setEnd(gen);
     applyCounts(); buildJump();
-    $('#since').textContent = `since ${yearOf(FIRST)}`;
     // reload any year we hold whose file changed
     let changed = false;
     for (const [y, c] of CHUNKS) if (!META.years[y] || META.years[y].v !== c.v) { CHUNKS.delete(y); changed = true; }
@@ -874,7 +1026,7 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
   }
 
   /* ---------- lifecycle ---------- */
-  drum.addEventListener('scroll', schedule, { passive: true });
+  drum.addEventListener('scroll', () => { schedule(); writeHash(); }, { passive: true });
   new ResizeObserver(() => {
     const keep = META && drum.scrollTop !== 0 ? centerTime() : null;
     geometry();
@@ -882,27 +1034,46 @@ main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
     schedule();
   }).observe(drum);
   const recolor = () => { readColors(); schedule(); };
+  function applyLang() {
+    L = I18N[lang]; MON = L.months; REGION = [L.r0, L.r1, L.r2];
+    document.documentElement.lang = lang;
+    document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = L[el.dataset.i18n]; });
+    document.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', L[el.dataset.i18nAria]); });
+    const lb = $('#lang'); lb.textContent = L.other; lb.setAttribute('aria-label', L.aLang);
+    if (META) { applyCounts(); buildJump(); } else { $('#range').textContent = L.loading; jumpSel.options[0].textContent = L.jump; }
+    if (!tip.hidden && tipFor >= 0 && tipFor < N) tip.innerHTML = tipHTML(tipFor, tipPinned);
+    showFreshness(); updateLatest(); schedule();
+  }
+  $('#lang').addEventListener('click', () => { lang = lang === 'pt' ? 'en' : 'pt'; pref('seis.lang', lang); applyLang(); });
+  $('#theme').addEventListener('click', () => {
+    const root = document.documentElement;
+    const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+    root.dataset.theme = dark ? 'light' : 'dark';
+    pref('seis.theme', root.dataset.theme);
+  });
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', recolor);
   new MutationObserver(recolor).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   if (document.fonts) document.fonts.ready.then(schedule);
 
   readColors();
+  applyLang();
   document.querySelectorAll('#spans button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.span === span)));
-  $('#lineSentence').textContent = SPANS[span].line;
   setupRows(); geometry(); schedule();
 
   loadMeta(true)
     .then(() => {
+      applyHash(); booted = true;
+      ensureYear(Math.max(...Object.keys(META.years).map(Number))); // the latest earthquake is in the newest year
       connectLive();
       setInterval(() => { loadMeta(false).catch(() => {}); }, META_POLL);
-      setInterval(() => { if (liveOn) setEnd(Date.now() / 1000); showFreshness(); }, 30000);
+      setInterval(() => { if (liveOn) setEnd(Date.now() / 1000); showFreshness(); updateLatest(); }, 30000);
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
         loadMeta(false).catch(() => {});
         if (!ws && wsEverOpen) { wsTries = 0; connectLive(); }
       });
     })
-    .catch(() => { $('#range').textContent = "Couldn't load the earthquake data. Reload the page to try again."; });
+    .catch(() => { $('#range').textContent = L.loadError; });
 })();
 </script>
 </body>
