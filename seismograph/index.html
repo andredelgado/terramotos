@@ -125,14 +125,27 @@ main { flex: 1; min-height: 0; display: flex; gap: 12px; position: relative; bor
 .tip .where { font-weight: 500; margin-top: 6px; }
 .tip .meta, .tip .src { color: var(--muted); font-size: 12px; }
 .tip .prelim { color: var(--accent); font-size: 12px; }
-.tip .close {
+.close {
   position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px;
   background: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer;
 }
-.tip .close:hover { background: var(--fill); color: var(--fg); }
+.close:hover { background: var(--fill); color: var(--fg); }
 
 footer { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2px 16px; font-size: 12px; color: var(--muted); padding-block: 10px; border-top: 1px solid var(--line); }
-footer a { color: inherit; text-decoration: none; }
+footer a, footer button { color: inherit; text-decoration: none; font: inherit; padding: 0; border: 0; background: none; cursor: pointer; }
+footer button:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+
+dialog {
+  box-sizing: border-box; width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto;
+  padding: 22px 24px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--bg); color: var(--fg); box-shadow: var(--shadow); line-height: 1.55;
+}
+dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+dialog h2 { margin: 0 0 8px; font-size: 16px; font-weight: 600; }
+dialog p { margin: 0 0 12px; }
+dialog ul { margin: 0 0 12px; padding-left: 18px; }
+dialog li { margin-bottom: 6px; }
+dialog .fine { margin: 0; color: var(--muted); font-size: 13px; }
 footer a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
 
 @media (max-width: 1100px) {
@@ -196,13 +209,18 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   <div class="rail" id="railBox" tabindex="0" role="slider" data-i18n-aria="aRail" aria-label="Timeline, newest at the top. Click or drag to travel in time." aria-valuemin="1909" aria-valuemax="2026" aria-valuenow="2026">
     <canvas id="rail"></canvas>
   </div>
-  <div class="tip" id="tip" hidden></div>
+  <div class="tip" id="tip" role="status" hidden></div>
 </main>
 
 <footer>
   <span><span data-i18n="data">Data:</span> <a href="https://www.ipma.pt/pt/geofisica/sismicidade/" target="_blank" rel="noopener">IPMA</a>, <a href="https://www.isc.ac.uk/" target="_blank" rel="noopener">ISC</a>, <a href="https://www.seismicportal.eu/" target="_blank" rel="noopener">EMSC</a>, <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS</a></span>
-  <span data-i18n="utc">Times in UTC</span>
+  <span><span data-i18n="utc">Times in UTC</span> · <button type="button" id="aboutBtn" data-i18n="about">About</button></span>
 </footer>
+
+<dialog id="about" aria-labelledby="aboutTitle">
+  <button class="close" type="button" aria-label="Close" data-i18n-aria="close">×</button>
+  <div id="aboutBody"></div>
+</dialog>
 
 <script>
 (() => {
@@ -225,7 +243,18 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       jump: 'Jump to…', latest: 'Latest', largest: 'Largest earthquakes', decades: 'Decades', decade: (d) => `${d}s`,
       first: 'First earthquake on record', data: 'Data:', utc: 'Times in UTC',
       aSpans: 'Time per line', aMag: 'Minimum magnitude', aJump: 'Jump to', aTheme: 'Switch between light and dark',
-      aDrum: 'Seismograph drum. Each line is a slice of time, newest on top; the waves are earthquakes. Scroll down to go back in time.',
+      aDrum: 'Seismograph drum. Each line is a slice of time, newest on top; the waves are earthquakes. Scroll down to go back in time; left and right arrows step between earthquakes.',
+      about: 'About',
+      aboutHTML: (y) => `<h2 id="aboutTitle">Terramotos Portugal</h2>
+        <p>Every earthquake recorded in mainland Portugal, the Azores and Madeira since ${y}, drawn as a seismograph drum.</p>
+        <ul>
+          <li>The newest line is on top. Each line covers the time you choose, from 3 hours to a year, and reads left to right. The red dot is now.</li>
+          <li>Each wave is one earthquake: taller and longer means stronger. Faded waves have no magnitude on record.</li>
+          <li>Click an earthquake for its details, a map and a link to share. With the keyboard, focus the drum and press ← or → to step between earthquakes.</li>
+          <li>Before the 1960s only large earthquakes were recorded, so older lines look quiet.</li>
+          <li>Magnitudes are on mixed scales (ML, mb, Ms, Mw). IPMA's magnitude is used wherever IPMA reported one.</li>
+        </ul>
+        <p class="fine">Data from IPMA, the ISC Bulletin, EMSC and USGS. New earthquakes arrive live from EMSC and are preliminary until the catalogues confirm them. Map outlines from Natural Earth.</p>`,
       aRail: 'Timeline, newest at the top. Click or drag to travel in time.', aMap: 'Map showing where the earthquake was',
       loading: 'Loading…', loadingY: (y) => `Loading ${y}`, failedY: (y) => `Couldn't load ${y}, retrying`,
       inView: (n) => `${n} in view`, loadError: "Couldn't load the data. Reload to try again.",
@@ -244,7 +273,18 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       jump: 'Ir para…', latest: 'Mais recente', largest: 'Maiores sismos', decades: 'Décadas', decade: (d) => `Anos ${d}`,
       first: 'Primeiro sismo registado', data: 'Dados:', utc: 'Horas em UTC',
       aSpans: 'Tempo por linha', aMag: 'Magnitude mínima', aJump: 'Ir para', aTheme: 'Alternar entre claro e escuro',
-      aDrum: 'Tambor de sismógrafo. Cada linha é um intervalo de tempo, a mais recente em cima; as ondas são sismos. Desça para recuar no tempo.',
+      aDrum: 'Tambor de sismógrafo. Cada linha é um intervalo de tempo, a mais recente em cima; as ondas são sismos. Desça para recuar no tempo; as setas esquerda e direita saltam entre sismos.',
+      about: 'Sobre',
+      aboutHTML: (y) => `<h2 id="aboutTitle">Terramotos Portugal</h2>
+        <p>Todos os sismos registados em Portugal continental, nos Açores e na Madeira desde ${y}, desenhados como num tambor de sismógrafo.</p>
+        <ul>
+          <li>A linha mais recente está em cima. Cada linha cobre o intervalo que escolher, de 3 horas a um ano, e lê-se da esquerda para a direita. O ponto vermelho é o momento atual.</li>
+          <li>Cada onda é um sismo: quanto mais alta e comprida, mais forte. As ondas esbatidas não têm magnitude registada.</li>
+          <li>Clique num sismo para ver os detalhes, um mapa e uma ligação para partilhar. Com o teclado, selecione o tambor e use ← ou → para saltar entre sismos.</li>
+          <li>Antes da década de 1960 só se registavam os sismos grandes, por isso as linhas mais antigas parecem calmas.</li>
+          <li>As magnitudes estão em escalas diferentes (ML, mb, Ms, Mw). Usa-se a magnitude do IPMA sempre que o IPMA a publicou.</li>
+        </ul>
+        <p class="fine">Dados do IPMA, do boletim do ISC, do EMSC e do USGS. Os sismos novos chegam em direto do EMSC e são preliminares até os catálogos os confirmarem. Contornos do mapa: Natural Earth.</p>`,
       aRail: 'Cronologia, o mais recente em cima. Clique ou arraste para viajar no tempo.', aMap: 'Mapa com o local do sismo',
       loading: 'A carregar…', loadingY: (y) => `A carregar ${y}`, failedY: (y) => `Falha ao carregar ${y}, a tentar de novo`,
       inView: (n) => `${n} visíveis`, loadError: 'Não foi possível carregar os dados. Recarregue a página.',
@@ -256,19 +296,26 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       openE: 'Abrir no EMSC', openI: 'Abrir no boletim do ISC', openU: 'Abrir no USGS', openP: 'Abrir sismicidade do IPMA',
     },
   };
-  // simplified outlines for the locator map: mainland coast and border as [lon, lat],
-  // islands as [region, lon, lat, half-length km, half-width km, tilt in degrees]
-  const MAINLAND = [[-8.87, 41.87], [-8.84, 41.69], [-8.78, 41.4], [-8.68, 41.15], [-8.65, 40.95], [-8.75, 40.64],
-    [-8.87, 40.2], [-9.07, 39.6], [-9.4, 39.36], [-9.42, 39.0], [-9.5, 38.78], [-9.48, 38.7], [-9.24, 38.66],
-    [-9.22, 38.41], [-8.9, 38.48], [-8.78, 38.4], [-8.8, 38.1], [-8.88, 37.95], [-8.8, 37.5], [-8.88, 37.2],
-    [-8.99, 37.02], [-8.67, 37.08], [-8.2, 37.08], [-7.9, 36.97], [-7.6, 37.1], [-7.4, 37.17], [-7.45, 37.55],
-    [-7.25, 38.0], [-6.93, 38.2], [-7.32, 38.44], [-7.0, 38.88], [-6.97, 39.02], [-7.3, 39.4], [-7.53, 39.66],
-    [-6.98, 39.67], [-6.86, 40.0], [-6.8, 40.33], [-6.8, 40.85], [-6.93, 41.03], [-6.19, 41.57], [-6.55, 41.94],
-    [-7.2, 41.88], [-8.13, 41.81], [-8.2, 42.15], [-8.64, 42.03]];
-  const ISLANDS = [[1, -31.11, 39.7, 3, 2, 90], [1, -31.19, 39.44, 8.5, 6, 90], [1, -28.7, 38.58, 10, 7, 0],
-    [1, -28.33, 38.47, 23, 7, -10], [1, -28.03, 38.64, 27, 3.2, -25], [1, -28.02, 39.05, 6, 3.5, -35],
-    [1, -27.22, 38.72, 15, 9, 0], [1, -25.5, 37.79, 31, 6.5, 0], [1, -25.1, 36.97, 8.5, 5, 0],
-    [2, -16.96, 32.75, 28, 10.5, -7], [2, -16.34, 33.07, 5.5, 3, 35], [2, -16.5, 32.52, 6, 0.8, -65], [2, -15.87, 30.14, 1.2, 1, 0]];
+  // coastlines for the locator map, simplified from Natural Earth (public domain): [region, [[lon, lat], …]]
+  const LAND = [
+    [0,[[-7.1,38.83],[-7.27,38.74],[-7.27,38.62],[-7.36,38.45],[-7.1,38.17],[-6.95,38.2],[-7.02,38.02],[-7.12,38.04],[-7.27,37.98],[-7.31,37.85],[-7.44,37.73],[-7.53,37.57],[-7.47,37.48],[-7.41,37.16],[-7.51,37.17],[-7.82,37.0],[-7.98,36.99],[-8.18,37.09],[-8.58,37.12],[-9.0,37.02],[-8.82,37.42],[-8.83,37.6],[-8.75,37.73],[-8.81,37.72],[-8.8,37.9],[-8.89,37.95],[-8.77,38.19],[-8.8,38.36],[-8.94,38.48],[-8.61,38.42],[-8.74,38.45],[-8.77,38.57],[-8.81,38.53],[-8.79,38.48],[-8.91,38.51],[-9.23,38.42],[-9.18,38.55],[-9.25,38.67],[-9.11,38.66],[-8.94,38.78],[-9.01,38.91],[-8.94,39.02],[-8.77,39.1],[-8.94,39.04],[-9.1,38.83],[-9.11,38.71],[-9.32,38.67],[-9.47,38.7],[-9.5,38.81],[-9.35,39.2],[-9.35,39.32],[-9.41,39.38],[-9.22,39.41],[-9.23,39.44],[-9.09,39.58],[-8.87,40.12],[-8.78,40.12],[-8.91,40.2],[-8.75,40.64],[-8.57,40.76],[-8.67,40.75],[-8.66,40.84],[-8.75,40.65],[-8.65,41.15],[-8.74,41.25],[-8.83,41.67],[-8.7,41.72],[-8.83,41.69],[-8.88,41.74],[-8.87,41.86],[-8.63,42.05],[-8.22,42.15],[-8.2,42.07],[-8.1,42.04],[-8.23,41.89],[-8.18,41.81],[-8.09,41.81],[-7.91,41.91],[-7.9,41.86],[-7.72,41.9],[-7.61,41.87],[-7.61,41.83],[-7.47,41.85],[-7.44,41.81],[-7.22,41.88],[-7.16,41.99],[-7.05,41.94],[-6.85,41.94],[-6.82,41.98],[-6.73,41.93],[-6.61,41.96],[-6.52,41.87],[-6.58,41.74],[-6.54,41.66],[-6.37,41.66],[-6.21,41.57],[-6.32,41.41],[-6.5,41.29],[-6.65,41.27],[-6.8,41.06],[-6.94,41.02],[-6.82,40.86],[-6.85,40.58],[-6.81,40.51],[-6.86,40.44],[-6.79,40.36],[-7.04,40.18],[-6.88,40.01],[-7.02,39.69],[-7.56,39.68],[-7.52,39.59],[-7.31,39.46],[-7.33,39.34],[-7.25,39.27],[-7.24,39.2],[-7.17,39.17],[-7.16,39.11],[-6.99,39.07],[-6.97,39.01]]],
+    [0,[[-7.96,36.98],[-7.86,37.0],[-7.88,36.97]]],
+    [0,[[-9.04,38.87],[-9.05,38.83],[-9.06,38.85]]],
+    [1,[[-25.198,37.864],[-25.135,37.822],[-25.132,37.786],[-25.157,37.755],[-25.506,37.707],[-25.616,37.741],[-25.704,37.744],[-25.859,37.854],[-25.841,37.906],[-25.765,37.912],[-25.704,37.883],[-25.689,37.846],[-25.554,37.83],[-25.499,37.851],[-25.458,37.83],[-25.34,37.862]]],
+    [1,[[-28.109,38.447],[-28.047,38.433],[-28.054,38.399],[-28.185,38.406],[-28.242,38.378],[-28.297,38.411],[-28.46,38.406],[-28.549,38.484],[-28.549,38.529],[-28.485,38.558],[-28.375,38.55],[-28.206,38.471]]],
+    [1,[[-27.02,38.694],[-27.054,38.679],[-27.054,38.645],[-27.089,38.631],[-27.204,38.653],[-27.228,38.641],[-27.353,38.684],[-27.392,38.759],[-27.298,38.804],[-27.144,38.796],[-27.043,38.744]]],
+    [1,[[-31.208,39.509],[-31.141,39.483],[-31.132,39.423],[-31.177,39.356],[-31.255,39.358],[-31.285,39.398],[-31.281,39.443],[-31.256,39.507],[-31.219,39.522],[-31.201,39.522]]],
+    [1,[[-27.891,38.604],[-27.779,38.567],[-27.761,38.549],[-27.796,38.542],[-27.977,38.593],[-28.035,38.59],[-28.178,38.645],[-28.312,38.735],[-28.316,38.755]]],
+    [1,[[-28.61,38.597],[-28.596,38.553],[-28.644,38.535],[-28.623,38.522],[-28.727,38.515],[-28.842,38.599],[-28.766,38.607],[-28.72,38.645]]],
+    [1,[[-27.983,39.015],[-28.062,39.036],[-28.072,39.068],[-28.055,39.098],[-28.007,39.105],[-27.942,39.053],[-27.947,39.024]]],
+    [1,[[-25.067,37.021],[-25.017,36.97],[-25.027,36.934],[-25.169,36.946],[-25.202,36.99],[-25.17,37.016]]],
+    [1,[[-31.117,39.728],[-31.083,39.723],[-31.08,39.693],[-31.1,39.664],[-31.132,39.659],[-31.153,39.701]]],
+    [2,[[-16.789,32.687],[-16.806,32.657],[-16.848,32.644],[-16.977,32.647],[-17.181,32.726],[-17.241,32.779],[-17.252,32.815],[-17.185,32.874],[-17.068,32.814],[-16.92,32.841],[-16.797,32.775],[-16.673,32.759],[-16.75,32.731]]],
+    [2,[[-16.34,33.057],[-16.364,33.034],[-16.398,33.04],[-16.362,33.09],[-16.289,33.109],[-16.275,33.06]]],
+    [2,[[-16.487,32.492],[-16.537,32.558],[-16.525,32.567]]],
+    [2,[[-16.028,30.034],[-16.023,30.032],[-16.027,30.03]]],
+    [2,[[-15.864,30.153],[-15.86,30.133],[-15.875,30.138]]],
+  ];
   // shift: magnitude units taken off before sizing a wave; stretch: wave length factor.
   // Longer lines pack more earthquakes, so small ones shrink to ticks and big ones still stand out.
   const SPANS = {
@@ -722,11 +769,12 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   /** A small locator map of the earthquake's region: land outlines and a dot. */
   function mapSVG(ev) {
     // frame the region's land (the remote Selvagens aside) together with the earthquake
-    const pts = [[ev.lon, ev.lat]];
-    if (ev.r === 0) pts.push(...MAINLAND);
-    for (const [r, lo, la, a] of ISLANDS) if (r === ev.r && la > 31) pts.push([lo - a / 85, la - a / 111], [lo + a / 85, la + a / 111]);
-    let x0 = 180, x1 = -180, y0 = 90, y1 = -90;
-    for (const [x, y] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    const shapes = LAND.filter(([r]) => r === ev.r).map(([, pts]) => pts);
+    let x0 = ev.lon, x1 = ev.lon, y0 = ev.lat, y1 = ev.lat;
+    for (const pts of shapes) {
+      if (pts[0][1] < 31) continue;
+      for (const [x, y] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+    }
     x0 -= 0.3; x1 += 0.3; y0 -= 0.3; y1 += 0.3;
     const mw = 240, mh = 132, pad = 8, c = Math.cos(((y0 + y1) / 2) * Math.PI / 180);
     const k = Math.min((mw - 2 * pad) / ((x1 - x0) * c), (mh - 2 * pad) / (y1 - y0)); // px per degree of latitude
@@ -734,11 +782,11 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     const X = (lon) => ox + (lon - x0) * c * k, Y = (lat) => oy + (y1 - lat) * k;
     const f = (n) => n.toFixed(1);
     let land = '';
-    if (ev.r === 0) land = `<path d="M${MAINLAND.map(([lo, la]) => `${f(X(lo))} ${f(Y(la))}`).join('L')}Z"/>`;
-    for (const [r, lo, la, a, b, tilt] of ISLANDS) {
-      if (r !== ev.r) continue;
-      const cx = f(X(lo)), cy = f(Y(la));
-      land += `<ellipse cx="${cx}" cy="${cy}" rx="${f(Math.max(1.2, a * k / 111.2))}" ry="${f(Math.max(1.2, b * k / 111.2))}" transform="rotate(${-tilt} ${cx} ${cy})"/>`;
+    for (const pts of shapes) {
+      const xs = pts.map(([lo]) => X(lo)), ys = pts.map(([, la]) => Y(la));
+      // an islet smaller than a couple of pixels is drawn as a dot so it stays visible
+      if (Math.max(...xs) - Math.min(...xs) < 2.5 && Math.max(...ys) - Math.min(...ys) < 2.5) land += `<circle cx="${f(xs[0])}" cy="${f(ys[0])}" r="1.2"/>`;
+      else land += `<path d="M${xs.map((x, i) => `${f(x)} ${f(ys[i])}`).join('L')}Z"/>`;
     }
     const px = f(Math.max(5, Math.min(mw - 5, X(ev.lon)))), py = f(Math.max(5, Math.min(mh - 5, Y(ev.lat))));
     return `<svg class="map" viewBox="0 0 ${mw} ${mh}" role="img" aria-label="${L.aMap}"><g class="land">${land}</g>` +
@@ -792,23 +840,49 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     tip.style.top = Math.max(4, top) + 'px';
   }
 
-  function hit(mx, my) {
-    const vt = vTop();
-    const j = Math.floor((my + vt - PADT) / ROWH);
-    if (j < 0 || j >= nRows) return -1;
-    const i = lastRow() - j, s = startAbs(i), en = startAbs(i + 1);
-    const pw = Math.max(10, W - G - 6);
-    let best = -1, bm = -99;
-    for (let e = lowerBound(T, s), hi = lowerBound(T, en); e < hi; e++) {
-      if (!mask[e]) continue;
-      const x = G + pw * (T[e] - s) / (en - s);
-      if (mx >= x - 4 && mx <= x + len(MAG[e])) {
+  /** The earthquake under a point; slop widens the target (for fingers) and the nearest one wins. */
+  function hit(mx, my, slop = 0) {
+    const vt = vTop(), pw = Math.max(10, W - G - 6);
+    const jA = Math.max(0, Math.floor((my - slop + vt - PADT) / ROWH));
+    const jB = Math.min(nRows - 1, Math.floor((my + slop + vt - PADT) / ROWH));
+    let best = -1, bd = Infinity, bm = -99;
+    for (let j = jA; j <= jB; j++) {
+      const i = lastRow() - j, s = startAbs(i), en = startAbs(i + 1);
+      const dy = Math.max(0, Math.abs(yOf(j, vt) - my) - ROWH / 2);
+      for (let e = lowerBound(T, s), hi = lowerBound(T, en); e < hi; e++) {
+        if (!mask[e]) continue;
+        const x = G + pw * (T[e] - s) / (en - s);
+        const d = dy + Math.max(0, x - 4 - mx, mx - x - len(MAG[e]));
+        if (d > slop) continue;
         const m = Number.isNaN(MAG[e]) ? -1 : MAG[e];
-        if (m > bm) { bm = m; best = e; }
+        if (d < bd || (d === bd && m > bm)) { bd = d; bm = m; best = e; }
       }
     }
     return best;
   }
+
+  /** Pin the next (dir 1) or previous (dir -1) earthquake in time, loading years on the way as needed. */
+  function stepQuake(dir) {
+    if (!META) return;
+    const t0 = pinned >= 0 ? T[pinned] : centerTime();
+    let e = pinned >= 0 ? pinned + dir : lowerBound(T, t0) - (dir < 0 ? 1 : 0);
+    while (e >= 0 && e < N && !mask[e]) e += dir;
+    const found = e >= 0 && e < N;
+    const yEnd = yearOf(found ? T[e] : dir > 0 ? END : FIRST);
+    for (let y = yearOf(t0); dir > 0 ? y <= yEnd : y >= yEnd; y += dir) {
+      // a year not loaded yet may hold a closer earthquake: fetch it, then try again
+      if (META.years[y] && !CHUNKS.has(y)) { ensureYear(y).then(() => { if (CHUNKS.has(y)) stepQuake(dir); }); return; }
+    }
+    if (!found) return;
+    const y = posOf(e, vTop()).y;
+    if (y < PADT || y > viewH - PADB) scrollToTime(T[e], 'center');
+    pin(e);
+  }
+  drum.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
+    ev.preventDefault();
+    stepQuake(ev.key === 'ArrowRight' ? 1 : -1);
+  });
 
   cv.addEventListener('mousemove', (ev) => {
     const r = cv.getBoundingClientRect();
@@ -821,7 +895,8 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   cv.addEventListener('mouseleave', () => { hover = -1; if (pinned < 0) hideTip(); schedule(); });
   cv.addEventListener('click', (ev) => {
     const r = cv.getBoundingClientRect();
-    const e = hit(ev.clientX - r.left, ev.clientY - r.top);
+    const finger = ev.pointerType ? ev.pointerType !== 'mouse' : matchMedia('(pointer: coarse)').matches;
+    const e = hit(ev.clientX - r.left, ev.clientY - r.top, finger ? 12 : 0);
     if (e >= 0) pin(e); else unpin();
   });
   tip.addEventListener('click', (ev) => {
@@ -829,7 +904,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     const c = ev.target.closest('.copy');
     if (c && navigator.clipboard) { syncHash(); navigator.clipboard.writeText(location.href).then(() => { c.textContent = L.copied; }, () => {}); }
   });
-  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') unpin(); });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('#about').open) unpin(); });
   function pin(e) { pinned = e; pinnedId = E[e].id; showTip(e, true); schedule(); writeHash(); }
   function unpin() { if (pinned < 0 && !pinnedId) return; pinned = -1; pinnedId = null; hideTip(); schedule(); writeHash(); }
 
@@ -1040,10 +1115,14 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = L[el.dataset.i18n]; });
     document.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', L[el.dataset.i18nAria]); });
     const lb = $('#lang'); lb.textContent = L.other; lb.setAttribute('aria-label', L.aLang);
+    $('#aboutBody').innerHTML = L.aboutHTML(META ? yearOf(FIRST) : 1909);
     if (META) { applyCounts(); buildJump(); } else { $('#range').textContent = L.loading; jumpSel.options[0].textContent = L.jump; }
     if (!tip.hidden && tipFor >= 0 && tipFor < N) tip.innerHTML = tipHTML(tipFor, tipPinned);
     showFreshness(); updateLatest(); schedule();
   }
+  const about = $('#about');
+  $('#aboutBtn').addEventListener('click', () => about.showModal());
+  about.addEventListener('click', (ev) => { if (ev.target === about || ev.target.closest('.close')) about.close(); });
   $('#lang').addEventListener('click', () => { lang = lang === 'pt' ? 'en' : 'pt'; pref('seis.lang', lang); applyLang(); });
   $('#theme').addEventListener('click', () => {
     const root = document.documentElement;

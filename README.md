@@ -19,7 +19,9 @@ earthquake (same event = within 30 s and 100 km):
 | [EMSC](https://www.seismicportal.eu/) | 1998 → now | Recent events, event pages, and the live feed in the browser |
 | [USGS](https://earthquake.usgs.gov/) | 1900 → now | Moment magnitudes (Mw) for large earthquakes |
 
-All four are free to use with attribution, which the page footer gives.
+All four are free to use with attribution, which the page footer gives. The coastlines on the
+small map come from [Natural Earth](https://www.naturalearthdata.com/) (public domain), simplified
+and stored in the page itself.
 
 ## How it stays up to date
 
