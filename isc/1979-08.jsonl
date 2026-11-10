@@ -1,0 +1,2 @@
+{"depth": 33.0, "etype": "earthquake", "event": "19790809-2111", "lat": 36.7, "lon": -11.41, "place": "Azores-Cape St. Vincent Ridge", "region": "continente", "sid": "660049", "time": 303006100.9, "url": "https://www.isc.ac.uk/cgi-bin/web-db-run?event_id=660049&out_format=ISF2&request=COMPREHENSIVE"}
+{"etype": "earthquake", "event": "19790818-1536", "lat": 36.0, "lon": -7.7, "place": "Strait of Gibraltar", "region": "continente", "sid": "660550", "time": 303804524.8, "url": "https://www.isc.ac.uk/cgi-bin/web-db-run?event_id=660550&out_format=ISF2&request=COMPREHENSIVE"}

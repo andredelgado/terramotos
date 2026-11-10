@@ -1,0 +1,2 @@
+{"etype": "earthquake", "event": "19771104-3595", "lat": 35.8, "lon": -7.9, "place": "Strait of Gibraltar", "region": "continente", "sid": "689873", "time": 247459144.6, "url": "https://www.isc.ac.uk/cgi-bin/web-db-run?event_id=689873&out_format=ISF2&request=COMPREHENSIVE"}
+{"depth": 7.0, "etype": "earthquake", "event": "19771120-0d8e", "lat": 38.173, "lon": -27.0833, "place": "Azores Islands", "region": "acores", "sid": "690628", "time": 248900403.56, "url": "https://www.isc.ac.uk/cgi-bin/web-db-run?event_id=690628&out_format=ISF2&request=COMPREHENSIVE"}
