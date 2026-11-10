@@ -13,7 +13,8 @@ permissions:
 
 jobs:
   python:
-    runs-on: ubuntu-latest
+    # Keep Python 3.9 available; Ubuntu 26.04 has no build for it.
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         python-version: ["3.9", "3.12"]
