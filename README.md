@@ -12,8 +12,13 @@ period and selected earthquake across. Shared map links include exact UTC `from`
 so they reopen the same period. Dots can be selected by touch or with the arrow keys.
 
 The panels show Portugal with its neighbours, the main cities and islands, and the plate boundaries
-that explain where the earthquakes are. That geography is `seismograph/map.json` (25 KB), fetched
-the first time the map is opened and built by `python3 tools/build_map.py`.
+that explain where the earthquakes are. Active faults and volcanoes can be switched on under the
+maps, and the choice is remembered. Each panel zooms on its own: the + and − buttons, a pinch,
+Ctrl + scroll, or + and − on the keyboard; once zoomed, drag (or Shift + arrows) to move.
+
+That geography is `seismograph/map.json` (25 KB), fetched the first time the map is opened, and
+`seismograph/faults.json` (22 KB), fetched only when the faults are switched on. Both are built by
+`python3 tools/build_map.py`.
 
 The page is in English and Portuguese, in light and dark. The address bar always holds a link to
 the current view (`#v=list` for the list, `s=1d&m=3&r=1` for the line length and filters, then `q=`
@@ -37,7 +42,12 @@ All four are free to use with attribution, which the page footer gives. The coas
 from [Natural Earth](https://www.naturalearthdata.com/) (public domain). The plate boundaries are
 from Bird, P. (2003), *An updated digital model of plate boundaries*, as converted by Hugo Ahlenius,
 Nordpil ([tectonicplates](https://github.com/fraxen/tectonicplates), Open Data Commons Attribution
-License); the page's About dialog credits both.
+License). The active faults are derived from the
+[GEM Global Active Faults Database](https://github.com/GEMScienceTools/gem-global-active-faults)
+(Styron and Pagani, Global Earthquake Model Foundation) under CC BY-SA 4.0, so
+`seismograph/faults.json` stays under that licence. The volcanoes are from the Smithsonian
+Institution's [Global Volcanism Program](https://volcano.si.edu), Volcanoes of the World. The
+page's About dialog credits all of them.
 
 ## How it stays up to date
 
@@ -131,7 +141,8 @@ Things to know:
 ## Files
 
 - `update.py`: the command line
-- `tools/build_map.py`: builds `seismograph/map.json`, the map's land, plate boundaries and labels
+- `tools/build_map.py`: builds `seismograph/map.json` (land, plate boundaries, volcanoes, labels) and
+  `seismograph/faults.json` (active faults)
 - `quake/sources.py`: readers for IPMA, the ISC, EMSC and USGS
 - `quake/store.py`: the database, merging, ids, and the site/CSV export
 - `quake/regions.py`: the three region outlines

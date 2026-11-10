@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-Build seismograph/map.json, the geography the map view draws: land, plate boundaries and labels.
+Build the geography the map view draws:
+
+  seismograph/map.json     land, plate boundaries, volcanoes and labels
+  seismograph/faults.json  active faults (a separate file because its licence is share-alike)
 
   python3 tools/build_map.py
 
@@ -10,12 +13,22 @@ Sources (downloaded once into cache/):
   Geophysics Geosystems 4(3), 1027 (PB2002), as converted by Hugo Ahlenius, Nordpil
   (https://github.com/fraxen/tectonicplates, Open Data Commons Attribution License 1.0)
 
+- Volcanoes: Global Volcanism Program, Smithsonian Institution, Volcanoes of the World (Holocene
+  list), https://volcano.si.edu, used with citation
+- Active faults: GEM Global Active Faults Database, Global Earthquake Model Foundation
+  (https://github.com/GEMScienceTools/gem-global-active-faults), CC BY-SA 4.0. faults.json is
+  derived from it and stays under CC BY-SA 4.0.
+
 Everything is clipped to one box around the three regions and simplified. Standard library only.
 
-Output:
-  land    [[portugal, [lon, lat, lon, lat, …]], …]  closed rings; portugal is 1 or 0
-  plates  [[lon, lat, lon, lat, …], …]              open lines
-  labels  [[kind, lon, lat, english, portuguese], …] kind: "city", "island" or "country"
+map.json:
+  land       [[portugal, [lon, lat, lon, lat, …]], …]  closed rings; portugal is 1 or 0
+  plates     [[lon, lat, lon, lat, …], …]              open lines
+  volcanoes  [[lon, lat, name], …]
+  labels     [[kind, lon, lat, english, portuguese], …] kind: "city", "island" or "country"
+faults.json:
+  license, source  where the data comes from and its terms
+  faults           [[lon, lat, lon, lat, …], …]         open lines
 """
 import json
 import math
@@ -28,6 +41,10 @@ CACHE = os.path.join(ROOT, "cache")
 OUT = os.path.join(ROOT, "seismograph", "map.json")
 COUNTRIES = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries.geojson"
 PLATES = "https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json"
+VOLCANOES = ("https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=1.0.0&request=GetFeature"
+             "&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Volcanoes&outputFormat=application/json")
+FAULTS = "https://raw.githubusercontent.com/GEMScienceTools/gem-global-active-faults/master/geojson/gem_active_faults_harmonized.geojson"
+FAULTS_OUT = os.path.join(ROOT, "seismograph", "faults.json")
 
 # wide enough for what a panel shows beyond its region on a wide screen
 WEST, EAST, SOUTH, NORTH = -46.0, 3.0, 25.0, 47.0
@@ -166,11 +183,36 @@ def main():
             for run in clip_line([(p[0], p[1]) for p in line]):
                 plates.append(flat(simplify(run, 0.01), 2))
 
+    volcanoes = []
+    for feature in download(VOLCANOES, "gvp_holocene_volcanoes.json")["features"]:
+        lon, lat = feature["geometry"]["coordinates"][:2]
+        if WEST <= lon <= EAST and SOUTH <= lat <= NORTH:
+            volcanoes.append([round(lon, 3), round(lat, 3), feature["properties"]["Volcano_Name"]])
+    volcanoes.sort()
+
     with open(OUT, "w", encoding="utf-8") as f:
-        json.dump({"land": land, "plates": plates, "labels": LABELS}, f, separators=(",", ":"), ensure_ascii=False)
+        json.dump({"land": land, "plates": plates, "volcanoes": volcanoes, "labels": LABELS}, f,
+                  separators=(",", ":"), ensure_ascii=False)
     points = sum(len(item[1]) for item in land) // 2
     print(f"wrote {OUT}: {len(land)} land rings ({points} points, {sum(i[0] for i in land)} in Portugal), "
-          f"{len(plates)} plate lines, {os.path.getsize(OUT)} bytes", file=sys.stderr)
+          f"{len(plates)} plate lines, {len(volcanoes)} volcanoes, {os.path.getsize(OUT)} bytes", file=sys.stderr)
+
+    faults = []
+    for feature in download(FAULTS, "gem_active_faults_harmonized.geojson")["features"]:
+        geom = feature.get("geometry") or {}
+        lines = geom.get("coordinates") or []
+        if geom.get("type") == "LineString":
+            lines = [lines]
+        for line in lines:
+            for run in clip_line([(p[0], p[1]) for p in line]):
+                faults.append(flat(simplify(run, 0.005), 3))
+    with open(FAULTS_OUT, "w", encoding="utf-8") as f:
+        json.dump({"license": "CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/",
+                   "source": "Derived from the GEM Global Active Faults Database, Global Earthquake Model Foundation, "
+                             "https://github.com/GEMScienceTools/gem-global-active-faults",
+                   "faults": faults}, f, separators=(",", ":"), ensure_ascii=False)
+    print(f"wrote {FAULTS_OUT}: {len(faults)} fault lines ({sum(len(x) for x in faults) // 2} points), "
+          f"{os.path.getsize(FAULTS_OUT)} bytes", file=sys.stderr)
 
 
 if __name__ == "__main__":
