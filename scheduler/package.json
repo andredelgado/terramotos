@@ -1,0 +1,14 @@
+{
+  "name": "terramotos-update-watchdog",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node check.mjs",
+    "test": "node --test watchdog.test.mjs",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "4.160.0"
+  }
+}

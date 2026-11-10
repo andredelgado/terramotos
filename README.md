@@ -73,6 +73,13 @@ A source that is down does not stop the others: the run carries on with what it 
 shows a warning. `python3 update.py check` fails once a source has been failing for more than a
 day, which is how a long outage turns a scheduled run red.
 
+GitHub's timer is best effort. The independent [update watchdog](scheduler/README.md) can trigger
+the same workflow from Cloudflare when the archive or dataset falls behind, while skipping an
+update that is already running. It needs its own deployment and repository-scoped Actions token;
+committing these files does not enable it. `node scheduler/check.mjs` checks the live state without
+starting a run. Check the archive and dataset timestamps to confirm a fetch; a successful push
+deployment only exports the data already stored.
+
 ## RSS
 
 Subscribe to [Terramotos Portugal RSS](https://andredelgado.github.io/terramotos/rss.xml) in a feed
@@ -204,6 +211,7 @@ Things to know:
 ## Files
 
 - `update.py`: the command line
+- `scheduler/`: independent hourly Cloudflare watchdog, local freshness check, and tests
 - `tools/build_map.py`: builds `seismograph/map.json` (land, plate boundaries, volcanoes, labels) and
   `seismograph/faults.json` (active faults)
 - `quake/sources.py`: readers for IPMA, the ISC, EMSC and USGS
