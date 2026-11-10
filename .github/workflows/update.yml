@@ -10,7 +10,7 @@ name: Update earthquakes
 
 on:
   schedule:
-    - cron: "7 * * * *"      # live: IPMA's feed + the last 2 days of EMSC
+    - cron: "17 * * * *"     # live: IPMA's feed + the last 2 days of EMSC
     - cron: "23 3 * * *"     # daily: + the last 60 days of EMSC and USGS
     - cron: "47 4 2 * *"     # monthly: + the last 3 years of the ISC Bulletin
   workflow_dispatch:
