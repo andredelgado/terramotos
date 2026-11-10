@@ -5,3 +5,4 @@ seismograph/data/
 *.csv
 __pycache__/
 .claude/
+archive/

@@ -17,7 +17,7 @@ on:
     paths: ["seismograph/index.html"]  # publish page changes right away
 
 permissions:
-  contents: read
+  contents: write  # to push the IPMA archive branch
   pages: write
   id-token: write
   actions: write   # to prune old copies of the database cache
@@ -61,8 +61,31 @@ jobs:
           if [ ! -s data/quakes.sqlite ]; then mode=backfill; fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
 
+      # IPMA only publishes about 30 days, so every record it has given us is also kept on the
+      # ipma-archive branch. If the database cache is ever lost, the backfill restores from there.
+      - name: Check out the IPMA archive
+        run: |
+          if git fetch --depth 1 origin ipma-archive; then
+            git worktree add -B ipma-archive archive FETCH_HEAD
+          else
+            git worktree add --detach archive
+            git -C archive switch --orphan ipma-archive
+          fi
+
       - name: Update (${{ steps.mode.outputs.mode }})
-        run: python3 update.py ${{ steps.mode.outputs.mode }}
+        run: python3 update.py ${{ steps.mode.outputs.mode }} --archive archive
+
+      - name: Save the IPMA archive
+        if: contains(fromJSON('["daily", "monthly", "backfill"]'), steps.mode.outputs.mode)
+        continue-on-error: true
+        run: |
+          cd archive
+          git add -A
+          if ! git diff --cached --quiet; then
+            git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -q -m "IPMA records as of $(date -u +%F)"
+            git push origin HEAD:refs/heads/ipma-archive
+          fi
 
       - name: Save the database
         if: steps.mode.outputs.mode != 'export'
@@ -88,3 +111,8 @@ jobs:
 
       - id: deploy
         uses: actions/deploy-pages@v4
+
+      # after publishing, so a long outage of one source turns the run red without stopping the site
+      - name: Check for sources that have been failing for more than a day
+        if: steps.mode.outputs.mode != 'export'
+        run: python3 update.py check

@@ -120,6 +120,59 @@ class Store:
         log(f"  {source}: {len(new)} records, {len(changed)} new or changed, {len(gone)} removed")
         return len(changed) + len(gone)
 
+    # ------------------------------------------------------------ IPMA archive
+
+    def export_ipma(self, folder):
+        """Write every IPMA record held to `folder`, one YYYY-MM.jsonl per month (only when changed).
+
+        IPMA publishes about 30 days, so these files are the only lasting copy of its records."""
+        os.makedirs(folder, exist_ok=True)
+        months = {}
+        for row in self.db.execute(f"SELECT sid, {', '.join(FIELDS)} FROM raw WHERE source='ipma' ORDER BY time, sid"):
+            month = dt.datetime.fromtimestamp(row["time"], dt.timezone.utc).strftime("%Y-%m")
+            months.setdefault(month, []).append(json.dumps(dict(row), ensure_ascii=False, sort_keys=True))
+        written = 0
+        for month, lines in months.items():
+            path = os.path.join(folder, month + ".jsonl")
+            body = "\n".join(lines) + "\n"
+            old = None
+            if os.path.exists(path):
+                with open(path, encoding="utf-8") as f:
+                    old = f.read()
+            if old != body:
+                with open(path, "w", encoding="utf-8") as f:
+                    f.write(body)
+                written += 1
+        log(f"  IPMA archive: {sum(map(len, months.values()))} records in {len(months)} month files, {written} rewritten")
+
+    def import_ipma(self, folder):
+        """Add archived IPMA records the database lacks (after it was rebuilt from scratch).
+
+        Records the database already has are left alone: its copy is the same or newer."""
+        if not os.path.isdir(folder):
+            return 0
+        have = {r["sid"] for r in self.db.execute("SELECT sid FROM raw WHERE source='ipma'")}
+        missing = []
+        for name in sorted(os.listdir(folder)):
+            if not name.endswith(".jsonl"):
+                continue
+            with open(os.path.join(folder, name), encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        rec = json.loads(line)
+                        if rec["sid"] not in have:
+                            have.add(rec["sid"])
+                            missing.append(rec)
+        if missing:
+            now = _time.time()
+            self.db.executemany(
+                f"INSERT INTO raw (source, sid, {', '.join(FIELDS)}, seen) VALUES ('ipma', ?, {', '.join('?' * len(FIELDS))}, ?)",
+                [(r["sid"], *[r.get(f) for f in FIELDS], now) for r in missing])
+            times = [r["time"] for r in missing]
+            self.dirty.append((min(times), max(times) + 1))
+            log(f"  IPMA archive: restored {len(missing)} records the database did not have")
+        return len(missing)
+
     # ------------------------------------------------------------ merging
 
     def rebuild_dirty(self):

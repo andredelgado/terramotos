@@ -34,7 +34,13 @@ and stored in the page itself.
 | Once | `python3 update.py backfill` | Everything since 1900 (about an hour from scratch; the ISC is slow) |
 
 IPMA's open data only keeps about 30 days. Anything not saved in that window only comes back
-through the ISC about two years later, so the 10-minute job matters.
+through the ISC about two years later, so the 10-minute job matters. For the same reason every IPMA
+record is also kept as plain files (`--archive DIR`, one `YYYY-MM.jsonl` per month). On GitHub they
+live on the `ipma-archive` branch, saved once a day, and a rebuilt database restores from them.
+
+A source that is down does not stop the others: the run carries on with what it could fetch and
+shows a warning. `python3 update.py check` fails once a source has been failing for more than a
+day, which is how a long outage turns a scheduled run red.
 
 The database (`data/quakes.sqlite`) keeps every source's raw records. Each run replaces a source's
 records for the time window it re-read, so revised and deleted events are picked up, then rebuilds
@@ -59,7 +65,8 @@ python3 update.py csv portugal_earthquakes.csv        # every earthquake as a CS
 3. Actions → *Update earthquakes* → *Run workflow* → mode **backfill** (the first run takes about an hour).
 
 After that, `.github/workflows/update.yml` runs on its own: every 10 minutes, daily and monthly.
-The database lives in the Actions cache; if it ever expires, the next run rebuilds it with a backfill.
+The database lives in the Actions cache; if it ever expires, the next run rebuilds it with a backfill
+and restores IPMA's records from the `ipma-archive` branch.
 
 Things to know:
 - GitHub runs scheduled jobs on a best-effort basis; delays of 5–30 minutes happen. The live feed

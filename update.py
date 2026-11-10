@@ -8,8 +8,13 @@ Keep the Portuguese earthquake catalogue up to date and write the site's data fi
   python3 update.py monthly    daily + the last 3 years of ISC and USGS     (once a month)
   python3 update.py export     only rewrite the site files
   python3 update.py csv FILE   write every earthquake to a CSV file
+  python3 update.py check      fail if a source has been failing for more than a day
 
 Options: --db data/quakes.sqlite  --site seismograph  --cache cache (raw downloads, backfill only)
+         --archive DIR  keep a copy of every IPMA record there, and restore from it (off by default)
+
+A source that fails does not stop the others: the run carries on, warns, and remembers since when
+that source has been failing. Only a backfill's history downloads are all-or-nothing.
 
 Sources and precedence: IPMA (official, last ~30 days), ISC Bulletin (1900 on, IPMA's magnitudes
 where IPMA reported them), EMSC (1998 on), USGS (1900 on, moment magnitudes). Standard library only.
@@ -38,41 +43,106 @@ def this_year():
     return dt.datetime.now(dt.timezone.utc).year
 
 
+SOURCES = ("ipma", "emsc", "usgs", "isc")
+FAILING_TOO_LONG = DAY
+
+
 def stamp(store):
     store.set("fresh_at", dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
 
 
-def run_live(store):
-    log("IPMA…")
-    recs, (t0, t1) = sources.ipma()
-    store.replace("ipma", t0, t1, recs)
-    log("EMSC, last 2 days…")
-    t0, t1 = now() - 2 * DAY, now() + 3600
-    store.replace("emsc", t0, t1, sources.emsc(t0, t1))
-    stamp(store)
+class Run:
+    """One update. Each source is attempted on its own, so one being down does not stop the rest."""
+
+    def __init__(self, store):
+        self.store = store
+        self.ok, self.failed = set(), {}
+
+    def attempt(self, source, what, fn):
+        """Run one fetch-and-store step; on failure undo it, note the source and carry on."""
+        log(what + "…")
+        dirty = len(self.store.dirty)
+        try:
+            fn()
+            self.store.db.commit()
+            self.ok.add(source)
+        except Exception as e:  # network, parsing, an unexpected payload: all mean "not this time"
+            self.store.db.rollback()
+            del self.store.dirty[dirty:]
+            self.failed[source] = f"{type(e).__name__}: {e}"
+            log(f"  {source} failed: {self.failed[source]}")
+
+    def finish(self):
+        """Remember since when each failing source has failed. Returns False if nothing worked."""
+        now_iso = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        for source in self.ok | set(self.failed):
+            key = f"failing_{source}"
+            if source in self.failed:
+                since = self.store.get(key) or now_iso
+                self.store.set(key, since)
+                print(f"::warning title={source.upper()} failed::{self.failed[source]} (failing since {since})")
+            else:
+                self.store.set(key, "")
+        self.store.db.commit()
+        return bool(self.ok - set(self.failed)) or not self.failed
 
 
-def run_daily(store):
-    run_live(store)
+def check(store):
+    """Exit status for the end of a scheduled run: 1 if a source has been failing for too long."""
+    bad = 0
+    for source in SOURCES:
+        since = store.get(f"failing_{source}")
+        if not since:
+            continue
+        age = now() - dt.datetime.strptime(since, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=dt.timezone.utc).timestamp()
+        if age > FAILING_TOO_LONG:
+            print(f"::error title={source.upper()} is down::{source} has failed on every run since {since}")
+            bad = 1
+        else:
+            log(f"{source} has been failing since {since}")
+    return bad
+
+
+def run_live(run):
+    store = run.store
+
+    def ipma():
+        recs, (t0, t1) = sources.ipma()
+        store.replace("ipma", t0, t1, recs)
+
+    def emsc():
+        t0, t1 = now() - 2 * DAY, now() + 3600
+        store.replace("emsc", t0, t1, sources.emsc(t0, t1))
+
+    run.attempt("ipma", "IPMA", ipma)
+    run.attempt("emsc", "EMSC, last 2 days", emsc)
+    if run.ok & {"ipma", "emsc"}:
+        stamp(store)
+        store.db.commit()
+
+
+def run_daily(run):
+    run_live(run)
+    store = run.store
     t0, t1 = now() - 60 * DAY, now() + 3600
-    log("EMSC, last 60 days…")
-    store.replace("emsc", t0, t1, sources.emsc(t0, t1))
-    log("USGS, last 60 days…")
-    store.replace("usgs", t0, t1, sources.usgs(t0, t1))
+    run.attempt("emsc", "EMSC, last 60 days", lambda: store.replace("emsc", t0, t1, sources.emsc(t0, t1)))
+    run.attempt("usgs", "USGS, last 60 days", lambda: store.replace("usgs", t0, t1, sources.usgs(t0, t1)))
 
 
-def run_monthly(store):
-    run_daily(store)
+def run_monthly(run):
+    run_daily(run)
+    store = run.store
     y = this_year()
     for year in range(y - 2, y + 1):  # the ISC reviews about two years behind
-        log(f"ISC {year}…")
-        store.replace("isc", year_start(year), year_start(year + 1), sources.isc(year, year))
-    log("USGS, last 3 years…")
+        run.attempt("isc", f"ISC {year}", lambda year=year: store.replace(
+            "isc", year_start(year), year_start(year + 1), sources.isc(year, year)))
     t0, t1 = year_start(y - 2), now() + 3600
-    store.replace("usgs", t0, t1, sources.usgs(t0, t1))
+    run.attempt("usgs", "USGS, last 3 years", lambda: store.replace("usgs", t0, t1, sources.usgs(t0, t1)))
 
 
-def run_backfill(store, cache):
+def run_backfill(run, cache):
+    # the history must be complete, so any failure here stops the backfill
+    store = run.store
     y = this_year()
     cached = lambda last, name: os.path.join(cache, name) if last < y else None  # never cache the current year
 
@@ -94,16 +164,19 @@ def run_backfill(store, cache):
         t0, t1 = year_start(y0), year_start(y1 + 1)
         store.replace("usgs", t0, t1, sources.usgs(t0, t1, cached(y1, f"usgs-{y0}-{y1}-pt.json")))
 
-    run_live(store)
+    store.db.commit()
+    run.ok.update(("isc", "usgs"))
+    run_live(run)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("mode", choices=["backfill", "live", "daily", "monthly", "export", "csv"])
+    ap.add_argument("mode", choices=["backfill", "live", "daily", "monthly", "export", "csv", "check"])
     ap.add_argument("file", nargs="?", help="output file for csv")
     ap.add_argument("--db", default=os.path.join("data", "quakes.sqlite"))
     ap.add_argument("--site", default="seismograph")
     ap.add_argument("--cache", default="cache", help="raw downloads kept between backfills")
+    ap.add_argument("--archive", help="folder holding a lasting copy of every IPMA record")
     a = ap.parse_args()
 
     store = Store(a.db)
@@ -112,14 +185,24 @@ def main():
             store.export_csv(a.file or "portugal_earthquakes.csv")
             log(f"wrote {a.file or 'portugal_earthquakes.csv'}")
             return
+        if a.mode == "check":
+            sys.exit(check(store))
         if a.mode != "export":
             started = now()
-            {"backfill": lambda: run_backfill(store, a.cache), "live": lambda: run_live(store),
-             "daily": lambda: run_daily(store), "monthly": lambda: run_monthly(store)}[a.mode]()
+            if a.archive:
+                store.import_ipma(a.archive)
+                store.db.commit()
+            run = Run(store)
+            {"backfill": lambda: run_backfill(run, a.cache), "live": lambda: run_live(run),
+             "daily": lambda: run_daily(run), "monthly": lambda: run_monthly(run)}[a.mode]()
             log("Rebuilding changed days…")
             spans = store.rebuild_dirty()
             store.db.commit()
             log(f"  {len(spans)} span(s) rebuilt in {now() - started:.0f}s")
+            if not run.finish():
+                sys.exit("every source failed; nothing to publish")
+            if a.archive:
+                store.export_ipma(a.archive)
         store.export_site(a.site)
         store.db.commit()
     finally:
