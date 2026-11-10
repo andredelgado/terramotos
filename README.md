@@ -73,6 +73,22 @@ A source that is down does not stop the others: the run carries on with what it 
 shows a warning. `python3 update.py check` fails once a source has been failing for more than a
 day, which is how a long outage turns a scheduled run red.
 
+## RSS
+
+Subscribe to [Terramotos Portugal RSS](https://andredelgado.github.io/terramotos/rss.xml) in a feed
+reader or another tool. The page also advertises the feed automatically and links to it in the footer.
+
+`seismograph/rss.xml` contains the 100 most recent merged earthquakes, newest first, with no
+magnitude filter. Each item links to the selected earthquake and includes its UTC time, magnitude
+and scale, region, location, depth, coordinates, sources, and felt intensity when available.
+The feed is in Portuguese. Revisions retain the same GUID, including after rebuilding the database
+from the archive, so feed readers can recognise an updated earthquake.
+
+Every successful update or `python3 update.py export` rebuilds the feed alongside the site data.
+The hourly job publishes it to GitHub Pages; it does not use the browser's live connection.
+The feed suggests a 60-minute refresh interval. When hosting elsewhere, pass
+`--site-url https://example.org/terramotos/` to set the absolute feed and earthquake links.
+
 ## Where the data lives
 
 The archive is the database: plain files holding every record each source has given, one
@@ -85,6 +101,8 @@ Everything else is derived from it and can be thrown away:
   the archive in a few seconds, with the same earthquake ids (like `19690228-c63c`), so links to
   earthquakes keep working.
 - `seismograph/data/` is what the page reads: `meta.json` and one file per year.
+- `seismograph/rss.xml` is the RSS feed. It is generated and published with the site, and is not
+  committed to the source branch.
 
 Each run replaces a source's records for the time window it re-read, so revised and deleted events
 are picked up, then rebuilds the merged earthquakes for the days that changed.
@@ -101,9 +119,19 @@ python3 -m http.server 8000 --directory seismograph   # open http://localhost:80
 python3 update.py csv portugal_earthquakes.csv        # every earthquake as a CSV
 ```
 
-## Browser checks
+## Checks
 
-With Node.js 24 LTS and Python 3 installed:
+The backend checks use the Python standard library and need no downloaded catalogue:
+
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py'
+```
+
+They check the RSS export, merged events, revisions, archive rebuilds, escaping and command-line
+export. `.github/workflows/python.yml` runs them on Python 3.9 and 3.12; the update job also runs
+them before fetching or publishing data.
+
+For the browser checks, with Node.js 24 LTS and Python 3 installed:
 
 ```bash
 npm ci
@@ -145,6 +173,7 @@ Things to know:
   `seismograph/faults.json` (active faults)
 - `quake/sources.py`: readers for IPMA, the ISC, EMSC and USGS
 - `quake/store.py`: the database, merging, ids, and the site/CSV export
+- `quake/rss.py`: builds the RSS feed from the merged catalogue
 - `quake/regions.py`: the three region outlines
 - `seismograph/index.html`: the page; it reads `seismograph/data/meta.json` and one file per year
   from `seismograph/data/years/`, loaded as you scroll

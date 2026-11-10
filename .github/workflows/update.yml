@@ -47,6 +47,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Check the feed exporter
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+
       - name: Check out the data branch
         run: |
           if git fetch --depth 1 origin data; then

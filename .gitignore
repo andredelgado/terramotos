@@ -2,6 +2,7 @@
 data/
 cache/
 seismograph/data/
+seismograph/rss.xml
 *.csv
 __pycache__/
 .claude/

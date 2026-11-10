@@ -28,6 +28,7 @@ import sys
 import time
 
 from quake import sources
+from quake.rss import SITE_URL
 from quake.store import Store, year_start
 
 DAY = 86400
@@ -177,6 +178,7 @@ def main():
     ap.add_argument("file", nargs="?", help="output file for csv")
     ap.add_argument("--db", default=os.path.join("data", "quakes.sqlite"))
     ap.add_argument("--site", default="seismograph")
+    ap.add_argument("--site-url", default=SITE_URL, help="public site URL used for RSS links")
     ap.add_argument("--cache", default="cache", help="raw downloads kept between backfills")
     ap.add_argument("--archive", help="folder holding a plain-file copy of every source record")
     a = ap.parse_args()
@@ -209,7 +211,7 @@ def main():
                 sys.exit("every source failed; nothing to publish")
             if a.archive:
                 store.export_archive(a.archive)
-        store.export_site(a.site)
+        store.export_site(a.site, a.site_url)
         store.db.commit()
     finally:
         store.close()

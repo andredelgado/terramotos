@@ -19,6 +19,7 @@ import sys
 import time as _time
 
 from .regions import NAMES, REGIONS
+from .rss import ITEM_LIMIT, SITE_URL, write_rss
 
 PRECEDENCE = ["ipma", "isc", "emsc", "usgs"]  # earlier wins for location and magnitude
 SOURCE_BITS = {"ipma": 1, "isc": 2, "emsc": 4, "usgs": 8}
@@ -250,8 +251,8 @@ class Store:
 
     # ------------------------------------------------------------ export
 
-    def export_site(self, site_dir):
-        """Write data/years/YYYY.json (only when changed) and data/meta.json."""
+    def export_site(self, site_dir, site_url=SITE_URL):
+        """Write data/years/YYYY.json (only when changed), data/meta.json and rss.xml."""
         data_dir = os.path.join(site_dir, "data")
         years_dir = os.path.join(data_dir, "years")
         os.makedirs(years_dir, exist_ok=True)
@@ -293,6 +294,8 @@ class Store:
         }
         with open(os.path.join(data_dir, "meta.json"), "w", encoding="utf-8") as f:
             json.dump(meta, f, separators=(",", ":"), ensure_ascii=False)
+        events = self.db.execute("SELECT * FROM event ORDER BY time DESC, id DESC LIMIT ?", (ITEM_LIMIT,))
+        write_rss(os.path.join(site_dir, "rss.xml"), events, site_url)
         log(f"  site: {meta['total']} earthquakes in {len(years)} year files, data as of {meta['generated']}")
 
     def export_csv(self, path):
