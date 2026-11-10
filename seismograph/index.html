@@ -7,6 +7,15 @@
 <meta name="description" content="Every recorded earthquake in mainland Portugal, the Azores and Madeira since 1909, on a seismograph drum. Data from IPMA, the ISC Bulletin, EMSC and USGS.">
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#ffffff">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Terramotos Portugal">
+<meta property="og:description" content="Every recorded earthquake in mainland Portugal, the Azores and Madeira since 1909, on a seismograph drum.">
+<meta property="og:url" content="https://andredelgado.github.io/terramotos/">
+<meta property="og:image" content="https://andredelgado.github.io/terramotos/share.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <script>
 // apply a saved theme before first paint; without one the system setting decides
 try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (_) {}
@@ -326,10 +335,30 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     '1y': { shift: 2.4, stretch: 0.14 },
   };
   // agency codes used by the ISC, EMSC and USGS for whoever measured the magnitude
-  const AGENCY = { LIS: 'IPMA', INMG: 'IPMA', IPMA: 'IPMA', PDA: 'Universidade dos Açores', MDD: 'IGN',
-    SVSA: 'SVSA (Azores monitoring)', PAS: 'Caltech',
-    EMSC: 'EMSC', ISC: 'ISC', ISCGEM: 'ISC-GEM', ISCGEMSUP: 'ISC-GEM', US: 'USGS', USGS: 'USGS', NEIC: 'USGS',
-    NEIS: 'USGS', GCMT: 'Global CMT', HRVD: 'Global CMT', GFZ: 'GFZ', BER: 'Univ. Bergen', CSEM: 'EMSC', ISS: 'ISS' };
+  const AGENCY = { LIS: 'IPMA', INMG: 'IPMA', IPMA: 'IPMA', IGIL: 'Instituto Dom Luiz', PDA: 'Universidade dos Açores',
+    ADH: 'Observatório Afonso Chaves', SVSA: 'SVSA (Azores monitoring)', MDD: 'IGN', IGN: 'IGN',
+    SFS: 'Observatorio de San Fernando', TOL: 'Observatorio de Toledo', CNRM: 'CNRST (Morocco)', SPGM: 'SPG (Morocco)',
+    RBA: 'Université Mohammed V', EMSC: 'EMSC', CSEM: 'EMSC', ISC: 'ISC', ISCGEM: 'ISC-GEM', ISCGEMSUP: 'ISC-GEM',
+    EVBIB: 'ISC Event Bibliography', US: 'USGS', USGS: 'USGS', NEIC: 'USGS', NEIS: 'USGS', USCGS: 'US Coast and Geodetic Survey',
+    GCMT: 'Global CMT', HRVD: 'Global CMT', IDC: 'CTBTO', EIDC: 'CTBTO', GFZ: 'GFZ', ZUR_RMT: 'ETH Zürich', LDG: 'CEA (France)',
+    ROM: 'INGV', MOS: 'Russian Academy of Sciences', UPP: 'Uppsala University', KEW: 'Kew Observatory', BER: 'Univ. Bergen',
+    AUST: 'Geoscience Australia', PAS: 'Caltech', 'P&S': 'Pacheco & Sykes', ISS: 'ISS' };
+  // some magnitudes carry two codes, like MDD;NEIC
+  const agencyName = (a) => [...new Set(a.split(';').map((c) => AGENCY[c.trim().toUpperCase()] || c.trim()))].join(' / ');
+  // the catalogues name places in English; these are the Portuguese forms
+  const PLACE_PT = { 'azores islands': 'Açores', 'azores islands, portugal': 'Açores', 'azores islands region': 'Região dos Açores',
+    'madeira islands region': 'Região da Madeira', 'madeira islands, portugal region': 'Região da Madeira',
+    'canary islands region': 'Região das Canárias', 'canary islands, spain region': 'Região das Canárias',
+    'azores-cape st. vincent ridge': 'Crista Açores–Cabo de São Vicente', 'west of gibraltar': 'Oeste de Gibraltar',
+    'strait of gibraltar': 'Estreito de Gibraltar', 'north atlantic ocean': 'Atlântico Norte', spain: 'Espanha' };
+  const COUNTRY_PT = { Portugal: 'Portugal', Spain: 'Espanha', Morocco: 'Marrocos' };
+  function placeName(p) {
+    if (!p || lang !== 'pt') return p;
+    const known = PLACE_PT[p.toLowerCase()];
+    if (known) return known;
+    const m = /^(\d+) km ([NSEW]+) of (.+), (Portugal|Spain|Morocco)$/.exec(p); // "53 km S of Olhão, Portugal"
+    return m ? `${m[1]} km a ${m[2].replace(/W/g, 'O')} de ${m[3]}, ${COUNTRY_PT[m[4]]}` : p;
+  }
   const SOURCES = [[1, 'IPMA'], [2, 'ISC'], [4, 'EMSC'], [8, 'USGS']];
   const pref = (k, v) => {
     try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (_) {}
@@ -801,9 +830,9 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     const feltLine = ev.inten ? L.feltI(ev.inten) : ev.felt ? L.felt : '';
     return (isPinned ? `<button class="close" type="button" aria-label="${L.close}">×</button>` : '') +
       `<div class="mag">${Number.isNaN(m) ? L.noMag : `M ${fmtDec(m, 1)}`}${!Number.isNaN(m) && ev.mt ? `<small>${esc(ev.mt)}</small>` : ''}</div>` +
-      (!Number.isNaN(m) && ev.au ? `<div class="meta">${esc(L.magBy(AGENCY[ev.au.toUpperCase()] || ev.au))}</div>` : '') +
+      (!Number.isNaN(m) && ev.au ? `<div class="meta">${esc(L.magBy(agencyName(ev.au)))}</div>` : '') +
       `<div>${fmtDate(ev.t)} · ${fmtTime(ev.t)} UTC</div>` +
-      (ev.place ? `<div class="where">${esc(ev.place)}</div>` : '') +
+      (ev.place ? `<div class="where">${esc(placeName(ev.place))}</div>` : '') +
       (feltLine ? `<div>${esc(feltLine)}</div>` : '') +
       `<div class="meta">${esc(meta)}</div>` +
       (ev.live ? `<div class="prelim">${L.prelim}</div>` : `<div class="src">${L.source} ${esc(src)}</div>`) +
@@ -980,7 +1009,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   function buildJump() {
     let html = `<option value="">${L.jump}</option><option value="latest">${L.latest}</option><optgroup label="${L.largest}">`;
     META.largest.slice(0, 10).forEach((q, i) => {
-      html += `<option value="L:${i}">M ${fmtDec(q.m, 1)} · ${fmtDate(q.t)} · ${esc(q.place || REGION[q.r])}</option>`;
+      html += `<option value="L:${i}">M ${fmtDec(q.m, 1)} · ${fmtDate(q.t)} · ${esc(placeName(q.place) || REGION[q.r])}</option>`;
     });
     html += `</optgroup><optgroup label="${L.decades}">`;
     for (let d = Math.floor(yearOf(END) / 10) * 10; d >= Math.floor(firstYear / 10) * 10; d -= 10) html += `<option value="d:${d}">${L.decade(d)}</option>`;
@@ -1011,7 +1040,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     if (!latestEv) return;
     const ev = latestEv;
     el.innerHTML = `<span class="k">${L.latest}</span>` +
-      esc([Number.isNaN(ev.m) ? L.noMag : `M ${fmtDec(ev.m, 1)}`, ev.place || REGION[ev.r], ago(ev.t)].join(' · '));
+      esc([Number.isNaN(ev.m) ? L.noMag : `M ${fmtDec(ev.m, 1)}`, placeName(ev.place) || REGION[ev.r], ago(ev.t)].join(' · '));
     el.classList.toggle('new', ev.id === flashId);
   }
   $('#latest').addEventListener('click', () => { if (latestEv) jumpTo(latestEv.t, latestEv.id); });
