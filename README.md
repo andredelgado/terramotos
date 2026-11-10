@@ -25,27 +25,39 @@ and stored in the page itself.
 
 ## How it stays up to date
 
-| When | Command | What it does |
+The page keeps itself current; the scheduled jobs keep the record.
+
+| When | Where | What it does |
 |---|---|---|
-| In the browser, continuously | — | The page listens to EMSC's live feed and shows new earthquakes within a minute or two, marked *preliminary*. It checks `data/meta.json` every 2 minutes and swaps in the stored version when it appears. |
-| Every 10 minutes | `python3 update.py live` | IPMA's feed + the last 2 days of EMSC |
+| Continuously | the browser | Reads IPMA's feed (the official last ~30 days) every 5 minutes and listens to EMSC's live feed, so new earthquakes show within a minute or two even if no job has run. EMSC's are marked *preliminary*. |
+| Every hour | `python3 update.py live` | Saves IPMA's feed + the last 2 days of EMSC |
 | Daily | `python3 update.py daily` | + the last 60 days of EMSC and USGS (revisions and deletions) |
 | Monthly | `python3 update.py monthly` | + the last 3 years of the ISC Bulletin, which reviews about 2 years behind |
 | Once | `python3 update.py backfill` | Everything since 1900 (about an hour from scratch; the ISC is slow) |
 
 IPMA's open data only keeps about 30 days. Anything not saved in that window only comes back
-through the ISC about two years later, so the 10-minute job matters. For the same reason every IPMA
-record is also kept as plain files (`--archive DIR`, one `YYYY-MM.jsonl` per month). On GitHub they
-live on the `ipma-archive` branch, saved once a day, and a rebuilt database restores from them.
+through the ISC about two years later, so the jobs exist to save it in time. A late or skipped run
+loses nothing as long as one runs within those 30 days.
 
 A source that is down does not stop the others: the run carries on with what it could fetch and
 shows a warning. `python3 update.py check` fails once a source has been failing for more than a
 day, which is how a long outage turns a scheduled run red.
 
-The database (`data/quakes.sqlite`) keeps every source's raw records. Each run replaces a source's
-records for the time window it re-read, so revised and deleted events are picked up, then rebuilds
-the merged earthquakes for the days that changed. Earthquake ids (like `19690228-c63c`) stay the
-same across rebuilds.
+## Where the data lives
+
+The archive is the database: plain files holding every record each source has given, one
+`<source>/YYYY-MM.jsonl` per month, each record tagged with the id of the earthquake it belongs to.
+On GitHub it is the `data` branch, committed after every run that changed something.
+
+Everything else is derived from it and can be thrown away:
+
+- `data/quakes.sqlite` is a working copy. With `--archive DIR`, an empty database is rebuilt from
+  the archive in a few seconds, with the same earthquake ids (like `19690228-c63c`), so links to
+  earthquakes keep working.
+- `seismograph/data/` is what the page reads: `meta.json` and one file per year.
+
+Each run replaces a source's records for the time window it re-read, so revised and deleted events
+are picked up, then rebuilds the merged earthquakes for the days that changed.
 
 ## Running it locally
 
@@ -54,6 +66,7 @@ Python 3.9+ with the standard library only.
 ```bash
 python3 update.py backfill        # first time: builds data/quakes.sqlite and seismograph/data/
 python3 update.py live            # then as often as you like
+python3 update.py live --archive archive   # the same, also keeping the plain-file archive
 python3 -m http.server 8000 --directory seismograph   # open http://localhost:8000
 python3 update.py csv portugal_earthquakes.csv        # every earthquake as a CSV
 ```
@@ -62,18 +75,20 @@ python3 update.py csv portugal_earthquakes.csv        # every earthquake as a CS
 
 1. Push this folder to a GitHub repository (branch `main`).
 2. Settings → Pages → *Build and deployment* → Source: **GitHub Actions**.
-3. Actions → *Update earthquakes* → *Run workflow* → mode **backfill** (the first run takes about an hour).
+3. Actions → *Update earthquakes* → *Run workflow*. With no `data` branch yet, the first run is a
+   backfill (about an hour) and creates it.
 
-After that, `.github/workflows/update.yml` runs on its own: every 10 minutes, daily and monthly.
-The database lives in the Actions cache; if it ever expires, the next run rebuilds it with a backfill
-and restores IPMA's records from the `ipma-archive` branch.
+After that, `.github/workflows/update.yml` runs on its own: hourly, daily and monthly. Each run
+checks out the `data` branch, rebuilds the database from it, fetches, commits what changed and
+publishes the site. Nothing is kept in caches.
 
 Things to know:
-- GitHub runs scheduled jobs on a best-effort basis; delays of 5–30 minutes happen. The live feed
-  in the browser covers the gap.
-- On a public repository, GitHub pauses scheduled workflows after 60 days without a commit. Any
+- GitHub runs scheduled jobs on a best-effort basis; delays and skipped runs happen. The page does
+  not depend on them to be current.
+- On a public repository, GitHub pauses scheduled workflows after 60 days without activity. Any
   commit (or re-enabling the workflow) starts them again.
-- Any other static host works the same way: run `update.py` on a schedule and serve `seismograph/`.
+- Any other static host works the same way: run `update.py --archive DIR` on a schedule, keep
+  `DIR` somewhere durable, and serve `seismograph/`.
 
 ## Files
 

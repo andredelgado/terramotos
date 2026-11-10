@@ -1,8 +1,16 @@
 name: Update earthquakes
 
+# The `data` branch is the database: every record each source has given us, as plain files.
+# Each run rebuilds a working database from it (a few seconds), fetches what is new, commits the
+# changes back to `data`, and publishes the site. Nothing else needs to survive between runs.
+#
+# The page reads IPMA's feed and EMSC's live feed itself, so it stays current between runs;
+# these jobs exist to keep what the sources publish before it scrolls out of their feeds
+# (IPMA keeps about 30 days).
+
 on:
   schedule:
-    - cron: "*/10 * * * *"   # live: IPMA's feed + the last 2 days of EMSC
+    - cron: "7 * * * *"      # live: IPMA's feed + the last 2 days of EMSC
     - cron: "23 3 * * *"     # daily: + the last 60 days of EMSC and USGS
     - cron: "47 4 2 * *"     # monthly: + the last 3 years of the ISC Bulletin
   workflow_dispatch:
@@ -14,13 +22,12 @@ on:
         default: live
   push:
     branches: [main]
-    paths: ["seismograph/index.html"]  # publish page changes right away
+    paths: ["seismograph/**", "quake/**", "update.py", ".github/workflows/update.yml"]
 
 permissions:
-  contents: write  # to push the IPMA archive branch
+  contents: write  # to commit to the data branch
   pages: write
   id-token: write
-  actions: write   # to prune old copies of the database cache
 
 concurrency:
   group: earthquakes
@@ -40,12 +47,14 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Restore the database
-        uses: actions/cache/restore@v4
-        with:
-          path: data/quakes.sqlite
-          key: quakes-db-${{ github.run_id }}
-          restore-keys: quakes-db-
+      - name: Check out the data branch
+        run: |
+          if git fetch --depth 1 origin data; then
+            git worktree add -B data archive FETCH_HEAD
+          else
+            git worktree add --detach archive
+            git -C archive switch --orphan data
+          fi
 
       - name: Choose what to fetch
         id: mode
@@ -57,51 +66,23 @@ jobs:
             push:*)                   mode=export ;;
             *)                        mode=live ;;
           esac
-          # no database yet (first run, or the cache expired): rebuild everything
-          if [ ! -s data/quakes.sqlite ]; then mode=backfill; fi
+          # nothing archived yet (the very first run): download the whole history
+          if [ ! -e archive/state.json ]; then mode=backfill; fi
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
-
-      # IPMA only publishes about 30 days, so every record it has given us is also kept on the
-      # ipma-archive branch. If the database cache is ever lost, the backfill restores from there.
-      - name: Check out the IPMA archive
-        run: |
-          if git fetch --depth 1 origin ipma-archive; then
-            git worktree add -B ipma-archive archive FETCH_HEAD
-          else
-            git worktree add --detach archive
-            git -C archive switch --orphan ipma-archive
-          fi
 
       - name: Update (${{ steps.mode.outputs.mode }})
         run: python3 update.py ${{ steps.mode.outputs.mode }} --archive archive
 
-      - name: Save the IPMA archive
-        if: contains(fromJSON('["daily", "monthly", "backfill"]'), steps.mode.outputs.mode)
-        continue-on-error: true
+      - name: Commit new records to the data branch
+        if: steps.mode.outputs.mode != 'export'
         run: |
           cd archive
           git add -A
           if ! git diff --cached --quiet; then
             git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-              commit -q -m "IPMA records as of $(date -u +%F)"
-            git push origin HEAD:refs/heads/ipma-archive
+              commit -q -m "${{ steps.mode.outputs.mode }} update, $(date -u +'%F %H:%M') UTC"
+            git push origin HEAD:refs/heads/data
           fi
-
-      - name: Save the database
-        if: steps.mode.outputs.mode != 'export'
-        uses: actions/cache/save@v4
-        with:
-          path: data/quakes.sqlite
-          key: quakes-db-${{ github.run_id }}
-
-      - name: Remove older copies of the database
-        if: steps.mode.outputs.mode != 'export'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          gh cache list --key quakes-db- --sort created_at --order desc --limit 100 --json id --jq '.[3:][].id' \
-            | xargs -r -n1 gh cache delete || true
 
       - uses: actions/configure-pages@v5
 

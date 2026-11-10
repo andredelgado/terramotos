@@ -11,7 +11,9 @@ Keep the Portuguese earthquake catalogue up to date and write the site's data fi
   python3 update.py check      fail if a source has been failing for more than a day
 
 Options: --db data/quakes.sqlite  --site seismograph  --cache cache (raw downloads, backfill only)
-         --archive DIR  keep a copy of every IPMA record there, and restore from it (off by default)
+         --archive DIR  plain-file copy of every source record (off by default). Written after each
+                        update; when the database is empty it is rebuilt from these files first,
+                        with the same earthquake ids, so the database is only ever a cache.
 
 A source that fails does not stop the others: the run carries on, warns, and remembers since when
 that source has been failing. Only a backfill's history downloads are all-or-nothing.
@@ -176,11 +178,18 @@ def main():
     ap.add_argument("--db", default=os.path.join("data", "quakes.sqlite"))
     ap.add_argument("--site", default="seismograph")
     ap.add_argument("--cache", default="cache", help="raw downloads kept between backfills")
-    ap.add_argument("--archive", help="folder holding a lasting copy of every IPMA record")
+    ap.add_argument("--archive", help="folder holding a plain-file copy of every source record")
     a = ap.parse_args()
 
     store = Store(a.db)
     try:
+        if a.archive and store.is_empty():
+            started = now()
+            log("Rebuilding the database from the archive…")
+            if store.import_archive(a.archive):
+                store.rebuild_dirty()
+                store.db.commit()
+                log(f"  done in {now() - started:.0f}s")
         if a.mode == "csv":
             store.export_csv(a.file or "portugal_earthquakes.csv")
             log(f"wrote {a.file or 'portugal_earthquakes.csv'}")
@@ -189,9 +198,6 @@ def main():
             sys.exit(check(store))
         if a.mode != "export":
             started = now()
-            if a.archive:
-                store.import_ipma(a.archive)
-                store.db.commit()
             run = Run(store)
             {"backfill": lambda: run_backfill(run, a.cache), "live": lambda: run_live(run),
              "daily": lambda: run_daily(run), "monthly": lambda: run_monthly(run)}[a.mode]()
@@ -202,7 +208,7 @@ def main():
             if not run.finish():
                 sys.exit("every source failed; nothing to publish")
             if a.archive:
-                store.export_ipma(a.archive)
+                store.export_archive(a.archive)
         store.export_site(a.site)
         store.db.commit()
     finally:

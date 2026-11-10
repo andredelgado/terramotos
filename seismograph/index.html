@@ -241,6 +241,8 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   const ORIGIN = Date.UTC(1900, 0, 1) / 1000; // a Monday, so week rows start on Mondays
   const MAXH = 8e6;                            // cap on the scrollable height (browser limits)
   const EMSC_WS = 'wss://www.seismicportal.eu/standing_order/websocket';
+  const IPMA_FEED = 'https://api.ipma.pt/open-data/observation/seismic/'; // + area: 3 = Azores, 7 = mainland and Madeira
+  const IPMA_POLL = 300000;                    // ms between reads of IPMA's feed
   const META_POLL = 120000;                    // ms between checks for new site data
   const MATCH_S = 30, MATCH_KM = 100;          // same earthquake: this close in time and place
   const I18N = {
@@ -372,9 +374,12 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   let minMag = pref('seis.mag') || 'all';
   let region = pref('seis.region') || 'all';
 
-  // data: META describes every year; CHUNKS holds the years loaded so far; LIVE the feed's new events
+  // data: META describes every year; CHUNKS holds the years loaded so far. Two feeds read straight
+  // from the browser fill in what the stored catalogue does not have yet: IPMA (official, last
+  // ~30 days) and LIVE (EMSC's push feed, preliminary)
   let META = null;
-  const CHUNKS = new Map(), LOADING = new Map(), LIVE = new Map();
+  const CHUNKS = new Map(), LOADING = new Map(), LIVE = new Map(), IPMA = new Map();
+  let ipmaAt = 0; // when IPMA's feed was last read successfully (ms)
   let E = [], N = 0, T = new Float64Array(0), MAG = new Float32Array(0), REG = new Uint8Array(0);
   let mask = new Uint8Array(0), cum = new Int32Array(1);
   let END = Date.now() / 1000, FIRST = Date.UTC(1909, 0, 1) / 1000;
@@ -536,14 +541,23 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     for (const y of [...CHUNKS.keys()].sort((a, b) => a - b)) for (const ev of CHUNKS.get(y).events) stored.push(ev);
     const ST = Float64Array.from(stored, (ev) => ev.t);
     const list = stored.slice();
-    for (const [unid, ev] of LIVE) {
-      // drop a live event once the stored catalogue has it
-      let known = false;
+    const inStored = (ev) => {
       for (let i = lowerBound(ST, ev.t - MATCH_S); i < stored.length && ST[i] <= ev.t + MATCH_S; i++) {
-        if (stored[i].k === ev.k || kmBetween(stored[i], ev) <= MATCH_KM) { known = true; break; }
+        if ((ev.k && stored[i].k === ev.k) || kmBetween(stored[i], ev) <= MATCH_KM) return true;
       }
-      if (known) LIVE.delete(unid); else list.push(ev);
+      return false;
+    };
+    // IPMA's own records first, then EMSC's for earthquakes neither the catalogue nor IPMA has
+    const extra = [];
+    for (const ev of IPMA.values()) if (!inStored(ev)) extra.push(ev);
+    const nIpma = extra.length;
+    for (const [unid, ev] of LIVE) {
+      if (inStored(ev)) { LIVE.delete(unid); continue; } // the stored catalogue has it now
+      let dup = false;
+      for (let i = 0; i < nIpma && !dup; i++) dup = Math.abs(extra[i].t - ev.t) <= MATCH_S && kmBetween(extra[i], ev) <= MATCH_KM;
+      if (!dup) extra.push(ev);
     }
+    for (const ev of extra) list.push(ev);
     if (list.length !== stored.length) list.sort((a, b) => a.t - b.t);
     E = list; N = E.length;
     T = Float64Array.from(E, (ev) => ev.t);
@@ -837,7 +851,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       `<div class="meta">${esc(meta)}</div>` +
       (ev.live ? `<div class="prelim">${L.prelim}</div>` : `<div class="src">${L.source} ${esc(src)}</div>`) +
       (isPinned ? mapSVG(ev) + `<div class="links"><a href="${link[0]}" target="_blank" rel="noopener">${link[1]} ↗</a>` +
-        (ev.live ? '' : `<button class="copy" type="button">${L.copy}</button>`) + '</div>' : '');
+        (/^\d{8}-/.test(ev.id) ? `<button class="copy" type="button">${L.copy}</button>` : '') + '</div>' : '');
   }
   let tipFor = -1, tipPinned = false, tipAt = null;
   function showTip(e, isPinned, at) {
@@ -1067,7 +1081,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     const el = $('#freshness');
     if (liveOn) { el.className = 'live'; el.textContent = L.live; el.title = L.liveTitle; return; }
     el.className = ''; el.title = '';
-    el.textContent = META ? L.updated(ago(Date.parse(META.generated) / 1000)) : '';
+    el.textContent = META ? L.updated(ago(Math.max(Date.parse(META.generated), ipmaAt) / 1000)) : '';
   }
 
   let ws = null, wsTries = 0, wsEverOpen = false;
@@ -1107,8 +1121,48 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     rebuild();
   }
 
+  /* ---------- IPMA's feed, read directly: the official record of the last ~30 days ---------- */
+  const current = () => liveOn || Date.now() - ipmaAt < 3 * IPMA_POLL; // is the page known to be up to date?
+  let ipmaBusy = false;
+  function loadIpma() {
+    if (!META || ipmaBusy) return;
+    ipmaBusy = true;
+    Promise.all([3, 7].map((area) => fetch(`${IPMA_FEED}${area}.json`, { cache: 'no-cache' })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })))
+      .then((areas) => {
+        const first = ipmaAt === 0, seen = new Map();
+        for (const d of areas.flatMap((a) => (Array.isArray(a.data) ? a.data : []))) {
+          const lat = Number(d.lat), lon = Number(d.lon);
+          const t = Date.parse(/Z|[+-]\d\d:?\d\d$/.test(d.time) ? d.time : d.time + 'Z') / 1000; // times are UTC
+          if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(t)) continue;
+          const r = regionOf(lat, lon);
+          if (r < 0) continue;
+          const m = Number(d.magnitud), sid = d.sismoId || new Date(t * 1000).toISOString().replace(/\D/g, '').slice(0, 14);
+          const hasMag = d.magnitud != null && d.magnitud !== '' && Number.isFinite(m) && m > -9; // -99 = not computed yet
+          const mt = String(d.magType || '').trim().toUpperCase();
+          const id = 'ipma-' + sid;
+          seen.set(sid, {
+            id, t, m: hasMag ? m : NaN, mt: mt && !mt.startsWith('M') ? 'M' + mt : mt, au: 'IPMA',
+            r, d: d.depth == null ? null : Math.round(Number(d.depth)), lat, lon,
+            place: String(d.obsRegion || '').replace(/\s+/g, ' ').trim(), s: 1, k: '',
+            felt: !!d.sensed, inten: d.degree || null, live: false, seed: hashId(id),
+          });
+          if (!first && !IPMA.has(sid) && t > Date.now() / 1000 - 6 * 3600) {
+            flashId = id; setTimeout(() => { if (flashId === id) { flashId = null; updateLatest(); } }, 12000);
+          }
+        }
+        IPMA.clear();
+        for (const [sid, ev] of seen) IPMA.set(sid, ev);
+        ipmaAt = Date.now();
+        setEnd(ipmaAt / 1000);
+        rebuild(); showFreshness();
+      })
+      .catch(() => {})
+      .finally(() => { ipmaBusy = false; });
+  }
+
   // local testing only: feed fake live-feed messages from the console
-  if (location.hostname === 'localhost') window.__sismografo = { handleLive: (msg) => handleLive(JSON.stringify(msg)), live: LIVE };
+  if (location.hostname === 'localhost') window.__sismografo = { handleLive: (msg) => handleLive(JSON.stringify(msg)), live: LIVE, ipma: IPMA, events: () => E };
 
   function applyMeta(m, first) {
     META = m;
@@ -1172,12 +1226,13 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     .then(() => {
       applyHash(); booted = true;
       ensureYear(Math.max(...Object.keys(META.years).map(Number))); // the latest earthquake is in the newest year
-      connectLive();
+      connectLive(); loadIpma();
       setInterval(() => { loadMeta(false).catch(() => {}); }, META_POLL);
-      setInterval(() => { if (liveOn) setEnd(Date.now() / 1000); showFreshness(); updateLatest(); }, 30000);
+      setInterval(() => { if (document.visibilityState === 'visible') loadIpma(); }, IPMA_POLL);
+      setInterval(() => { if (current()) setEnd(Date.now() / 1000); showFreshness(); updateLatest(); }, 30000);
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
-        loadMeta(false).catch(() => {});
+        loadMeta(false).catch(() => {}); loadIpma();
         if (!ws && wsEverOpen) { wsTries = 0; connectLive(); }
       });
     })

@@ -120,58 +120,82 @@ class Store:
         log(f"  {source}: {len(new)} records, {len(changed)} new or changed, {len(gone)} removed")
         return len(changed) + len(gone)
 
-    # ------------------------------------------------------------ IPMA archive
+    # ------------------------------------------------------------ archive
 
-    def export_ipma(self, folder):
-        """Write every IPMA record held to `folder`, one YYYY-MM.jsonl per month (only when changed).
+    def is_empty(self):
+        return self.db.execute("SELECT 1 FROM raw LIMIT 1").fetchone() is None
 
-        IPMA publishes about 30 days, so these files are the only lasting copy of its records."""
-        os.makedirs(folder, exist_ok=True)
-        months = {}
-        for row in self.db.execute(f"SELECT sid, {', '.join(FIELDS)} FROM raw WHERE source='ipma' ORDER BY time, sid"):
+    def export_archive(self, folder):
+        """Write everything that cannot be derived again to plain files under `folder`:
+
+          <source>/YYYY-MM.jsonl  every raw record, with the id of the earthquake it belongs to
+          state.json              the small facts in the state table
+
+        Only files whose content changed are rewritten. The database can be rebuilt from these
+        files alone (import_archive), with the same earthquake ids."""
+        files = {}
+        cols = ", ".join("r." + f for f in FIELDS)
+        for row in self.db.execute(
+                f"SELECT r.source, r.sid, {cols}, l.event FROM raw r "
+                "LEFT JOIN link l ON l.source=r.source AND l.sid=r.sid ORDER BY r.source, r.time, r.sid"):
             month = dt.datetime.fromtimestamp(row["time"], dt.timezone.utc).strftime("%Y-%m")
-            months.setdefault(month, []).append(json.dumps(dict(row), ensure_ascii=False, sort_keys=True))
+            rec = {k: row[k] for k in ("sid", *FIELDS, "event") if row[k] is not None}
+            files.setdefault(os.path.join(row["source"], month + ".jsonl"), []).append(
+                json.dumps(rec, ensure_ascii=False, sort_keys=True))
+        bodies = {name: "\n".join(lines) + "\n" for name, lines in files.items()}
+        state = {r["k"]: r["v"] for r in self.db.execute("SELECT k, v FROM state ORDER BY k") if r["v"] != ""}
+        bodies["state.json"] = json.dumps(state, indent=1, sort_keys=True) + "\n"
         written = 0
-        for month, lines in months.items():
-            path = os.path.join(folder, month + ".jsonl")
-            body = "\n".join(lines) + "\n"
+        for name, body in bodies.items():
+            path = os.path.join(folder, name)
             old = None
             if os.path.exists(path):
                 with open(path, encoding="utf-8") as f:
                     old = f.read()
             if old != body:
+                os.makedirs(os.path.dirname(path), exist_ok=True)
                 with open(path, "w", encoding="utf-8") as f:
                     f.write(body)
                 written += 1
-        log(f"  IPMA archive: {sum(map(len, months.values()))} records in {len(months)} month files, {written} rewritten")
+        for source in SOURCE_BITS:  # months that no longer hold any record
+            sub = os.path.join(folder, source)
+            for name in os.listdir(sub) if os.path.isdir(sub) else []:
+                if name.endswith(".jsonl") and os.path.join(source, name) not in bodies:
+                    os.remove(os.path.join(sub, name))
+        log(f"  archive: {sum(map(len, files.values()))} records in {len(files)} files, {written} rewritten")
 
-    def import_ipma(self, folder):
-        """Add archived IPMA records the database lacks (after it was rebuilt from scratch).
+    def import_archive(self, folder):
+        """Fill an empty database from the files export_archive wrote. Returns the record count.
 
-        Records the database already has are left alone: its copy is the same or newer."""
-        if not os.path.isdir(folder):
-            return 0
-        have = {r["sid"] for r in self.db.execute("SELECT sid FROM raw WHERE source='ipma'")}
-        missing = []
-        for name in sorted(os.listdir(folder)):
-            if not name.endswith(".jsonl"):
-                continue
-            with open(os.path.join(folder, name), encoding="utf-8") as f:
-                for line in f:
-                    if line.strip():
+        The caller rebuilds the earthquakes afterwards (rebuild_dirty); they keep their ids."""
+        raws, links, now = [], [], _time.time()
+        for source in SOURCE_BITS:
+            sub = os.path.join(folder, source)
+            for name in sorted(os.listdir(sub)) if os.path.isdir(sub) else []:
+                if not name.endswith(".jsonl"):
+                    continue
+                with open(os.path.join(sub, name), encoding="utf-8") as f:
+                    for line in f:
+                        if not line.strip():
+                            continue
                         rec = json.loads(line)
-                        if rec["sid"] not in have:
-                            have.add(rec["sid"])
-                            missing.append(rec)
-        if missing:
-            now = _time.time()
-            self.db.executemany(
-                f"INSERT INTO raw (source, sid, {', '.join(FIELDS)}, seen) VALUES ('ipma', ?, {', '.join('?' * len(FIELDS))}, ?)",
-                [(r["sid"], *[r.get(f) for f in FIELDS], now) for r in missing])
-            times = [r["time"] for r in missing]
-            self.dirty.append((min(times), max(times) + 1))
-            log(f"  IPMA archive: restored {len(missing)} records the database did not have")
-        return len(missing)
+                        raws.append((source, rec["sid"], *[rec.get(k) for k in FIELDS], now))
+                        if rec.get("event"):
+                            links.append((source, rec["sid"], rec["event"]))
+        if not raws:
+            return 0
+        self.db.executemany(
+            f"INSERT INTO raw (source, sid, {', '.join(FIELDS)}, seen) VALUES (?, ?, {', '.join('?' * len(FIELDS))}, ?)", raws)
+        self.db.executemany("INSERT INTO link VALUES (?, ?, ?)", links)
+        path = os.path.join(folder, "state.json")
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as f:
+                for k, v in json.load(f).items():
+                    self.set(k, v)
+        t = FIELDS.index("time") + 2
+        self.dirty.append((min(r[t] for r in raws), max(r[t] for r in raws) + 1))
+        log(f"  archive: restored {len(raws)} records")
+        return len(raws)
 
     # ------------------------------------------------------------ merging
 
