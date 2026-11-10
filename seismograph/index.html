@@ -155,6 +155,8 @@ dialog p { margin: 0 0 12px; }
 dialog ul { margin: 0 0 12px; padding-left: 18px; }
 dialog li { margin-bottom: 6px; }
 dialog .fine { margin: 0; color: var(--muted); font-size: 13px; }
+dialog .get { margin-top: 12px; }
+dialog a { color: var(--fg); font-weight: 500; text-underline-offset: 3px; }
 footer a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
 
 @media (max-width: 1100px) {
@@ -265,7 +267,8 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
           <li>Before the 1960s only large earthquakes were recorded, so older lines look quiet.</li>
           <li>Magnitudes are on mixed scales (ML, mb, Ms, Mw). IPMA's magnitude is used wherever IPMA reported one.</li>
         </ul>
-        <p class="fine">Data from IPMA, the ISC Bulletin, EMSC and USGS. New earthquakes arrive live from EMSC and are preliminary until the catalogues confirm them. Map outlines from Natural Earth.</p>`,
+        <p class="fine">Data from IPMA, the ISC Bulletin, EMSC and USGS. New earthquakes arrive live from EMSC and are preliminary until the catalogues confirm them. Map outlines from Natural Earth.</p>
+        <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Download the data</a> (CSV, free for non-commercial use with credit to the sources)</p>`,
       aRail: 'Timeline, newest at the top. Click or drag to travel in time.', aMap: 'Map showing where the earthquake was',
       loading: 'Loading…', loadingY: (y) => `Loading ${y}`, failedY: (y) => `Couldn't load ${y}, retrying`,
       inView: (n) => `${n} in view`, loadError: "Couldn't load the data. Reload to try again.",
@@ -295,7 +298,8 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
           <li>Antes da década de 1960 só se registavam os sismos grandes, por isso as linhas mais antigas parecem calmas.</li>
           <li>As magnitudes estão em escalas diferentes (ML, mb, Ms, Mw). Usa-se a magnitude do IPMA sempre que o IPMA a publicou.</li>
         </ul>
-        <p class="fine">Dados do IPMA, do boletim do ISC, do EMSC e do USGS. Os sismos novos chegam em direto do EMSC e são preliminares até os catálogos os confirmarem. Contornos do mapa: Natural Earth.</p>`,
+        <p class="fine">Dados do IPMA, do boletim do ISC, do EMSC e do USGS. Os sismos novos chegam em direto do EMSC e são preliminares até os catálogos os confirmarem. Contornos do mapa: Natural Earth.</p>
+        <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Descarregar os dados</a> (CSV, uso não comercial livre, com referência às fontes)</p>`,
       aRail: 'Cronologia, o mais recente em cima. Clique ou arraste para viajar no tempo.', aMap: 'Mapa com o local do sismo',
       loading: 'A carregar…', loadingY: (y) => `A carregar ${y}`, failedY: (y) => `Falha ao carregar ${y}, a tentar de novo`,
       inView: (n) => `${n} visíveis`, loadError: 'Não foi possível carregar os dados. Recarregue a página.',

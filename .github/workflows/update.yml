@@ -84,6 +84,25 @@ jobs:
             git push origin HEAD:refs/heads/data
           fi
 
+      # the whole catalogue as one download, attached to a release that is updated in place
+      - name: Publish the dataset
+        if: contains(fromJSON('["daily", "monthly", "backfill"]'), steps.mode.outputs.mode)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir dist
+          python3 update.py csv dist/terramotos-portugal.csv
+          cp DATA.md dist/README.md
+          (cd dist && zip -9 -q terramotos-portugal.zip terramotos-portugal.csv README.md)
+          notes="Every recorded earthquake in mainland Portugal, the Azores and Madeira since 1909: $(($(wc -l < dist/terramotos-portugal.csv) - 1)) earthquakes as of $(date -u +%F). The zip holds one CSV and a README with the columns, the sources and the terms of use. This file is replaced as the catalogue is updated."
+          if gh release view dataset >/dev/null 2>&1; then
+            gh release upload dataset dist/terramotos-portugal.zip --clobber
+            gh release edit dataset --notes "$notes"
+          else
+            gh release create dataset dist/terramotos-portugal.zip --title "Dataset" --notes "$notes"
+          fi
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

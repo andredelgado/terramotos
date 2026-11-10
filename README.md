@@ -99,6 +99,12 @@ Things to know:
 - `seismograph/index.html`: the page; it reads `seismograph/data/meta.json` and one file per year
   from `seismograph/data/years/`, loaded as you scroll
 
+## The dataset
+
+The whole catalogue is one download, replaced daily:
+[terramotos-portugal.zip](https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip) (a CSV and a README). [DATA.md](DATA.md) describes the columns,
+how records are merged, and the terms: non-commercial use with credit to the four sources.
+
 ## Data notes
 
 - Before the 1960s only large earthquakes were recorded, and most records before 1990 have no magnitude.
