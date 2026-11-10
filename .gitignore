@@ -6,3 +6,9 @@ seismograph/data/
 __pycache__/
 .claude/
 archive/
+node_modules/
+playwright-report/
+test-results/
+.playwright-mcp/
+output/playwright/
+.site-preview/

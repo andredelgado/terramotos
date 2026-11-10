@@ -48,7 +48,7 @@ try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === '
 }
 
 html {
-  height: 100%; box-sizing: border-box;
+  height: 100%; box-sizing: border-box; background: var(--bg);
   padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 [hidden] { display: none !important; }
@@ -87,10 +87,12 @@ select {
 }
 select:hover, .icon:hover { border-color: var(--muted); }
 button:focus-visible, select:focus-visible, .drum:focus-visible, .rail:focus-visible, a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.list:has(table:focus-visible) { outline: 2px solid var(--fg); outline-offset: -2px; }
 
 .status { display: flex; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); padding-bottom: 10px; }
 .status b { color: var(--fg); font-weight: 500; }
-.status .right { display: flex; gap: 14px; }
+.status .right { display: flex; flex-wrap: wrap; min-width: 0; max-width: 100%; gap: 4px 14px; }
+#freshness[data-state="offline"], #freshness[data-state="stale"] { color: var(--fg); }
 .latest {
   min-width: 0; max-width: 100%; padding: 0; border: 0; background: none; cursor: pointer; text-align: left;
   font: inherit; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -112,6 +114,40 @@ main { flex: 1; min-height: 0; display: flex; gap: 12px; position: relative; bor
 .drum canvas { position: sticky; top: 0; display: block; cursor: crosshair; }
 .rail { flex: none; width: 54px; position: relative; cursor: ns-resize; touch-action: none; }
 .rail canvas { display: block; width: 100%; height: 100%; }
+.rail { order: 3; }
+
+.seg svg { display: block; }
+#views button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 9px; }
+.list { flex: 1; min-width: 0; overflow-y: auto; overflow-anchor: none; scrollbar-width: none; }
+.list::-webkit-scrollbar { display: none; }
+.list table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; }
+.list th {
+  box-sizing: border-box; position: sticky; top: 0; z-index: 1; height: 40px; padding: 0 12px 0 0; text-align: left; white-space: nowrap;
+  font-weight: 500; color: var(--muted); background: var(--bg); box-shadow: inset 0 -1px var(--line);
+}
+.list td { box-sizing: border-box; height: 48px; padding: 0 12px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: inset 0 -1px var(--grid); }
+.list th:first-child, .list td:first-child { padding-left: 10px; }
+.list th:nth-child(1) { width: 180px; }
+.list th:nth-child(2) { width: 100px; }
+.list th:nth-child(4) { width: 120px; }
+.list th:nth-child(5) { width: 84px; }
+.list th:nth-child(5), .list td:nth-child(5) { text-align: right; }
+.list tr[data-e] { cursor: pointer; }
+.list tr[data-e]:hover td, .list tr.on td { background: var(--fill); }
+.list tr.on td:first-child { box-shadow: inset 2px 0 var(--accent), inset 0 -1px var(--grid); }
+.list .tm, .list small, .list .na { color: var(--muted); }
+.list .tm { margin-left: 4px; }
+.list .compact { display: none; }
+.list small { font-size: 11px; }
+.list b { font-weight: 600; }
+.list em { font-style: normal; font-size: 12px; color: var(--accent); margin-left: 6px; }
+.list .pad td, .list .wait td { height: auto; padding-block: 0; box-shadow: none; }
+.list .wait td { vertical-align: top; padding-top: 11px; color: var(--muted); }
+.tip.docked {
+  position: relative; left: auto !important; top: auto !important; box-sizing: border-box;
+  flex: 0 0 280px; width: 280px; max-width: none; max-height: calc(100% - 24px);
+  align-self: flex-start; margin-block: 12px; overflow-y: auto; box-shadow: none;
+}
 
 .tip {
   position: absolute; z-index: 5; width: max-content; max-width: min(280px, 80vw);
@@ -135,7 +171,7 @@ main { flex: 1; min-height: 0; display: flex; gap: 12px; position: relative; bor
 .tip .meta, .tip .src { color: var(--muted); font-size: 12px; }
 .tip .prelim { color: var(--accent); font-size: 12px; }
 .close {
-  position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px;
+  position: absolute; top: 4px; right: 4px; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px;
   background: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer;
 }
 .close:hover { background: var(--fill); color: var(--fg); }
@@ -159,16 +195,45 @@ dialog .get { margin-top: 12px; }
 dialog a { color: var(--fg); font-weight: 500; text-underline-offset: 3px; }
 footer a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
 
-@media (max-width: 1100px) {
+@media (max-width: 1300px) {
   .controls { order: 3; flex: 1 1 100%; min-width: 0; flex-wrap: wrap; }
+}
+@media (max-width: 900px) {
+  .list .opt { display: none; }
+  #views .view-label { display: none; }
+}
+@media (max-width: 700px) {
+  .list-view { flex-direction: column; gap: 0; padding-right: 62px; }
+  .list-view .rail { position: absolute; right: 0; top: 0; bottom: 0; }
+  .tip.docked { flex: 0 1 auto; width: 100%; max-height: 55%; margin-block: 8px; align-self: stretch; }
+  .tip.docked .map { max-height: 120px; }
 }
 @media (max-width: 600px) {
   h1 .unit { display: none; }
-  .seg { flex: 1 1 100%; }
-  .seg button { flex: 1; padding: 0; }
+  .controls { gap: 8px; }
+  .seg button { height: 36px; }
+  select { height: 40px; }
+  #views { margin-right: auto; }
+  #spans { flex: 1 1 calc(100% - 80px); }
+  #spans button { flex: 1; padding: 0; }
+  .list th, .list td { padding-right: 8px; }
+  .list th:first-child, .list td:first-child { padding-left: 8px; }
+  .list th:nth-child(1) { width: 112px; }
+  .list th:nth-child(2) { width: 56px; }
+  .list .tm { display: block; margin-left: 0; font-size: 11px; }
+  .list .full { display: none; }
+  .list .compact { display: inline; }
+  .list-view { padding-right: 48px; }
   select { flex: 1 1 0; max-width: none; }
   .rail { width: 40px; }
   main { gap: 8px; }
+}
+@media (max-width: 360px) {
+  h1 .count { display: none; }
+  .controls { gap: 6px; }
+  #views button { padding-inline: 6px; }
+  #mag { flex: 0 0 52px; }
+  select { padding-inline: 8px 24px; background-position: right 8px center; }
 }
 </style>
 </head>
@@ -177,6 +242,10 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
 <header class="top">
   <h1>Terramotos Portugal<span class="count"><span id="count"></span><span class="unit" data-i18n="unit"> earthquakes</span></span></h1>
   <div class="controls">
+    <div class="seg" role="group" aria-label="View" data-i18n-aria="aView" id="views">
+      <button type="button" data-view="drum" aria-pressed="true" data-i18n-aria="vDrum"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8h3l1.5-4 2 8.5 2-7L11 8h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="view-label" data-i18n="vDrum">Seismograph</span></button>
+      <button type="button" data-view="list" aria-pressed="false" data-i18n-aria="vList"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="view-label" data-i18n="vList">List</span></button>
+    </div>
     <div class="seg" role="group" aria-label="Time per line" data-i18n-aria="aSpans" id="spans">
       <button type="button" data-span="3h" aria-pressed="true">3h</button>
       <button type="button" data-span="1d" aria-pressed="false" data-i18n="s1d">Day</button>
@@ -217,6 +286,12 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     <canvas id="drumCanvas"></canvas>
     <div id="spacer"></div>
   </div>
+  <div class="list" id="list" hidden>
+    <table role="grid" tabindex="0" data-i18n-aria="aList">
+      <thead><tr aria-rowindex="1"><th scope="col" data-i18n="cTime">Time (UTC)</th><th scope="col" data-i18n-aria="mag"><span class="full" data-i18n="mag">Magnitude</span><span class="compact" aria-hidden="true">M</span></th><th scope="col" data-i18n="cPlace">Place</th><th scope="col" class="opt" data-i18n="region">Region</th><th scope="col" class="opt" data-i18n="cDepth">Depth</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
   <div class="rail" id="railBox" tabindex="0" role="slider" data-i18n-aria="aRail" aria-label="Timeline, newest at the top. Click or drag to travel in time." aria-valuemin="1909" aria-valuemax="2026" aria-valuenow="2026">
     <canvas id="rail"></canvas>
   </div>
@@ -237,7 +312,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
 (() => {
   const $ = (s) => document.querySelector(s);
   const drum = $('#drum'), cv = $('#drumCanvas'), spacer = $('#spacer');
-  const railBox = $('#railBox'), railCv = $('#rail'), tip = $('#tip');
+  const main = drum.parentElement, railBox = $('#railBox'), railCv = $('#rail'), tip = $('#tip');
   const ctx = cv.getContext('2d'), rctx = railCv.getContext('2d');
 
   const ORIGIN = Date.UTC(1900, 0, 1) / 1000; // a Monday, so week rows start on Mondays
@@ -253,7 +328,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
       r0: 'Mainland', r1: 'Azores', r2: 'Madeira', unit: ' earthquakes',
       s1d: 'Day', s1w: 'Week', s1mo: 'Month', s1y: 'Year', mag: 'Magnitude', region: 'Region',
-      jump: 'Jump to…', latest: 'Latest', largest: 'Largest earthquakes', decades: 'Decades', decade: (d) => `${d}s`,
+      jump: 'Jump to…', jumpShort: 'Jump…', latest: 'Latest', largest: 'Largest earthquakes', decades: 'Decades', decade: (d) => `${d}s`,
       first: 'First earthquake on record', data: 'Data:', utc: 'Times in UTC',
       aSpans: 'Time per line', aMag: 'Minimum magnitude', aJump: 'Jump to', aTheme: 'Switch between light and dark',
       aDrum: 'Seismograph drum. Each line is a slice of time, newest on top; the waves are earthquakes. Scroll down to go back in time; left and right arrows step between earthquakes.',
@@ -262,17 +337,24 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
         <p>Every earthquake recorded in mainland Portugal, the Azores and Madeira since ${y}, drawn as a seismograph drum.</p>
         <ul>
           <li>The newest line is on top. Each line covers the time you choose, from 3 hours to a year, and reads left to right. The red dot is now.</li>
-          <li>Each wave is one earthquake: taller and longer means stronger. Faded waves have no magnitude on record.</li>
-          <li>Click an earthquake for its details, a map and a link to share. With the keyboard, focus the drum and press ← or → to step between earthquakes.</li>
+          <li>Each wave is a generated illustration of one earthquake’s magnitude: taller and longer means stronger. Faded waves have no magnitude on record.</li>
+          <li>Switch to the list to read individual earthquakes. Click an earthquake for its details, a map and a link to share. With the keyboard, use ← / → on the drum or ↑ / ↓ in the list to step between earthquakes.</li>
           <li>Before the 1960s only large earthquakes were recorded, so older lines look quiet.</li>
           <li>Magnitudes are on mixed scales (ML, mb, Ms, Mw). IPMA's magnitude is used wherever IPMA reported one.</li>
         </ul>
         <p class="fine">Data from IPMA, the ISC Bulletin, EMSC and USGS. New earthquakes arrive live from EMSC and are preliminary until the catalogues confirm them. Map outlines from Natural Earth.</p>
         <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Download the data</a> (CSV, free for non-commercial use with credit to the sources)</p>`,
+      aView: 'View', vDrum: 'Seismograph', vList: 'List', cTime: 'Time (UTC)', cPlace: 'Place', cDepth: 'Depth',
+      prelimShort: 'preliminary', none: 'No earthquakes match these filters.',
+      aList: 'Earthquakes, newest first. Up and down arrows select the next or previous earthquake.',
       aRail: 'Timeline, newest at the top. Click or drag to travel in time.', aMap: 'Map showing where the earthquake was',
       loading: 'Loading…', loadingY: (y) => `Loading ${y}`, failedY: (y) => `Couldn't load ${y}, retrying`,
       inView: (n) => `${n} in view`, loadError: "Couldn't load the data. Reload to try again.",
-      live: 'Live', liveTitle: 'Connected to the EMSC live feed', updated: (a) => `Updated ${a}`,
+      updated: (a) => `Updated ${a}`, offline: 'Offline', delayed: 'Updates delayed',
+      offlineLoad: 'You’re offline. Reconnect to load earthquakes.',
+      checking: 'Checking for updates…', ipmaFailed: 'IPMA: last update check failed',
+      received: (s, t) => `${s}: data received ${t}`, catalogue: (t) => `Catalogue published ${t}`,
+      emscConnected: 'EMSC live feed connected', emscDisconnected: 'EMSC live feed disconnected',
       now: 'just now', minAgo: (n) => `${n} min ago`, hAgo: (n) => `${n} h ago`, dAgo: (n) => `${n} days ago`,
       noMag: 'No magnitude', magBy: (a) => `Magnitude by ${a}`, deep: (d) => `${d} km deep`,
       felt: 'Felt', feltI: (i) => `Felt, intensity ${i}`, prelim: 'Preliminary · EMSC live feed', source: 'Source:',
@@ -284,7 +366,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       months: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
       r0: 'Continente', r1: 'Açores', r2: 'Madeira', unit: ' sismos',
       s1d: 'Dia', s1w: 'Semana', s1mo: 'Mês', s1y: 'Ano', mag: 'Magnitude', region: 'Região',
-      jump: 'Ir para…', latest: 'Mais recente', largest: 'Maiores sismos', decades: 'Décadas', decade: (d) => `Anos ${d}`,
+      jump: 'Ir para…', jumpShort: 'Ir…', latest: 'Mais recente', largest: 'Maiores sismos', decades: 'Décadas', decade: (d) => `Anos ${d}`,
       first: 'Primeiro sismo registado', data: 'Dados:', utc: 'Horas em UTC',
       aSpans: 'Tempo por linha', aMag: 'Magnitude mínima', aJump: 'Ir para', aTheme: 'Alternar entre claro e escuro',
       aDrum: 'Tambor de sismógrafo. Cada linha é um intervalo de tempo, a mais recente em cima; as ondas são sismos. Desça para recuar no tempo; as setas esquerda e direita saltam entre sismos.',
@@ -293,17 +375,24 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
         <p>Todos os sismos registados em Portugal continental, nos Açores e na Madeira desde ${y}, desenhados como num tambor de sismógrafo.</p>
         <ul>
           <li>A linha mais recente está em cima. Cada linha cobre o intervalo que escolher, de 3 horas a um ano, e lê-se da esquerda para a direita. O ponto vermelho é o momento atual.</li>
-          <li>Cada onda é um sismo: quanto mais alta e comprida, mais forte. As ondas esbatidas não têm magnitude registada.</li>
-          <li>Clique num sismo para ver os detalhes, um mapa e uma ligação para partilhar. Com o teclado, selecione o tambor e use ← ou → para saltar entre sismos.</li>
+          <li>Cada onda é uma ilustração gerada a partir da magnitude de um sismo: quanto mais alta e comprida, mais forte. As ondas esbatidas não têm magnitude registada.</li>
+          <li>Use a lista para consultar cada sismo. Clique num sismo para ver os detalhes, um mapa e uma ligação para partilhar. Com o teclado, use ← / → no tambor ou ↑ / ↓ na lista para saltar entre sismos.</li>
           <li>Antes da década de 1960 só se registavam os sismos grandes, por isso as linhas mais antigas parecem calmas.</li>
           <li>As magnitudes estão em escalas diferentes (ML, mb, Ms, Mw). Usa-se a magnitude do IPMA sempre que o IPMA a publicou.</li>
         </ul>
         <p class="fine">Dados do IPMA, do boletim do ISC, do EMSC e do USGS. Os sismos novos chegam em direto do EMSC e são preliminares até os catálogos os confirmarem. Contornos do mapa: Natural Earth.</p>
         <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Descarregar os dados</a> (CSV, uso não comercial livre, com referência às fontes)</p>`,
+      aView: 'Vista', vDrum: 'Sismógrafo', vList: 'Lista', cTime: 'Hora (UTC)', cPlace: 'Local', cDepth: 'Profundidade',
+      prelimShort: 'preliminar', none: 'Nenhum sismo corresponde a estes filtros.',
+      aList: 'Sismos, do mais recente para o mais antigo. As setas para cima e para baixo selecionam o sismo seguinte ou anterior.',
       aRail: 'Cronologia, o mais recente em cima. Clique ou arraste para viajar no tempo.', aMap: 'Mapa com o local do sismo',
       loading: 'A carregar…', loadingY: (y) => `A carregar ${y}`, failedY: (y) => `Falha ao carregar ${y}, a tentar de novo`,
       inView: (n) => `${n} visíveis`, loadError: 'Não foi possível carregar os dados. Recarregue a página.',
-      live: 'Em direto', liveTitle: 'Ligado ao feed em direto do EMSC', updated: (a) => `Atualizado ${a}`,
+      updated: (a) => `Atualizado ${a}`, offline: 'Sem ligação', delayed: 'Atualizações em atraso',
+      offlineLoad: 'Sem ligação à internet. Volte a ligar-se para carregar os sismos.',
+      checking: 'A procurar atualizações…', ipmaFailed: 'IPMA: falha na última procura de atualizações',
+      received: (s, t) => `${s}: dados recebidos ${t}`, catalogue: (t) => `Catálogo publicado ${t}`,
+      emscConnected: 'Feed em direto do EMSC ligado', emscDisconnected: 'Feed em direto do EMSC desligado',
       now: 'agora mesmo', minAgo: (n) => `há ${n} min`, hAgo: (n) => `há ${n} h`, dAgo: (n) => `há ${n} dias`,
       noMag: 'Sem magnitude', magBy: (a) => `Magnitude segundo ${a}`, deep: (d) => `${d} km de profundidade`,
       felt: 'Sentido', feltI: (i) => `Sentido, intensidade ${i}`, prelim: 'Preliminar · EMSC em direto', source: 'Fonte:',
@@ -383,7 +472,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   // ~30 days) and LIVE (EMSC's push feed, preliminary)
   let META = null;
   const CHUNKS = new Map(), LOADING = new Map(), LIVE = new Map(), IPMA = new Map();
-  let ipmaAt = 0; // when IPMA's feed was last read successfully (ms)
+  let ipmaAt = 0, emscAt = 0, ipmaFailed = false; // successful data receipts, rather than connection times
   let E = [], N = 0, T = new Float64Array(0), MAG = new Float32Array(0), REG = new Uint8Array(0);
   let mask = new Uint8Array(0), cum = new Int32Array(1);
   let END = Date.now() / 1000, FIRST = Date.UTC(1909, 0, 1) / 1000;
@@ -393,6 +482,11 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   let dpr = 1, W = 0, viewH = 0, ROWH = 20, G = 64, base = 0, nRows = 1, maxScroll = 0, maxTop = 0;
   const PADT = 30, PADB = 30;
   let hover = -1, pinned = -1, pinnedId = null, raf = 0, C = {};
+  let navigationTime = null; // retain an explicit destination through asynchronous loads and resizes
+  // the same earthquakes as a table: 'drum' or 'list'
+  let view = pref('seis.view') === 'list' ? 'list' : 'drum';
+  const listBox = $('#list'), rowsEl = $('#rows');
+  const scroller = () => (view === 'list' ? listBox : drum);
 
   /* ---------- rows ---------- */
   function rowAbs(ts) {
@@ -541,6 +635,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
 
   /** Flatten the loaded years plus live events into the arrays the drawing uses. */
   function rebuild() {
+    const anchor = captureListAnchor();
     const stored = [];
     for (const y of [...CHUNKS.keys()].sort((a, b) => a - b)) for (const ev of CHUNKS.get(y).events) stored.push(ev);
     const ST = Float64Array.from(stored, (ev) => ev.t);
@@ -572,6 +667,9 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     pinned = pinnedId ? E.findIndex((ev) => ev.id === pinnedId) : -1;
     if (pinnedId && pinned < 0 && !LOADING.size) unpin();
     applyMask();
+    if (pinned >= 0) showTip(pinned, true);
+    restoreListAnchor(anchor);
+    finishJump();
   }
 
   function applyMask() {
@@ -583,6 +681,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       mask[e] = ok ? 1 : 0;
       cum[e + 1] = cum[e] + mask[e];
     }
+    listDirty = true;
     if (pinned >= 0 && !mask[pinned]) unpin();
     updateLatest();
     schedule();
@@ -607,6 +706,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       total += n;
     }
     yearMax = Math.max(1, ...yearCounts);
+    listDirty = true;
     $('#count').textContent = fmtNum(total);
   }
 
@@ -616,6 +716,11 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     ROWH = narrow ? 18 : 20;
     G = narrow ? 44 : 64;
     dpr = window.devicePixelRatio || 1;
+    if (view === 'list') { // only the rail is a canvas here
+      railCv.width = Math.round(railBox.clientWidth * dpr);
+      railCv.height = Math.round(railBox.clientHeight * dpr);
+      return;
+    }
     viewH = drum.clientHeight;
     W = drum.clientWidth;
     const total = PADT + nRows * ROWH + PADB;
@@ -632,16 +737,35 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     railCv.height = Math.round(rh * dpr);
   }
   const vTop = () => (maxScroll > 0 ? (drum.scrollTop / maxScroll) * maxTop : 0);
-  const setVTop = (v) => { drum.scrollTop = maxTop > 0 ? (Math.max(0, Math.min(maxTop, v)) / maxTop) * maxScroll : 0; };
+  const setVTop = (v) => {
+    if (v <= 0 || !Number.isFinite(v)) navigationTime = null;
+    if (view === 'list') { renderList(); listBox.scrollTop = v <= 0 ? 0 : listBox.scrollHeight; schedule(); writeHash(); return; }
+    drum.scrollTop = maxTop > 0 ? (Math.max(0, Math.min(maxTop, v)) / maxTop) * maxScroll : 0;
+  };
   const yOf = (j, vt) => PADT + j * ROWH + ROWH / 2 - vt;
 
   function centerTime() {
+    if (navigationTime != null) return navigationTime;
+    if (view === 'list') return listRowTime(Math.floor((listBox.scrollTop + Math.max(0, listBox.clientHeight - LHEAD) / 3) / LROW));
     const vt = vTop();
     const j = Math.max(0, Math.min(nRows - 1, Math.floor((vt + viewH / 2 - PADT) / ROWH)));
     const i = lastRow() - j;
     return (startAbs(i) + Math.min(END, startAbs(i + 1))) / 2;
   }
   function scrollToTime(t, align) {
+    navigationTime = t;
+    if (view === 'list') {
+      t = Math.max(FIRST, Math.min(END, t));
+      const request = ++listJump;
+      placeListTime(t, align);
+      const y = yearOf(t);
+      if (META && META.years[y] && !CHUNKS.has(y) && yearCounts[y - firstYear]) {
+        ensureYear(y).then(() => {
+          if (view === 'list' && request === listJump && CHUNKS.has(y)) placeListTime(t, align);
+        });
+      }
+      return;
+    }
     const i = Math.max(base, Math.min(lastRow(), rowAbs(t)));
     const j = lastRow() - i;
     setVTop(align === 'top' ? PADT + j * ROWH - ROWH : PADT + j * ROWH + ROWH / 2 - viewH / 2);
@@ -651,6 +775,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   /** Move the end of the record (the pen) forward, keeping the view where it was. */
   function setEnd(t) {
     if (t <= END) return;
+    if (view === 'list') { END = t; setupRows(); listDirty = true; schedule(); return; }
     const before = nRows, atTop = drum.scrollTop === 0, vt = vTop();
     END = t; setupRows();
     if (nRows !== before) {
@@ -669,6 +794,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
 
   function draw() {
     raf = 0;
+    if (view === 'list') { renderList(); return; }
     if (!W || !viewH) return;
     const vt = vTop();
     const x0 = G, pw = Math.max(10, W - G - 6), last = lastRow();
@@ -863,6 +989,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     tipFor = e; tipPinned = isPinned; tipAt = at || null;
     tip.classList.toggle('pinned', isPinned);
     tip.hidden = false;
+    tip.classList.toggle('docked', view === 'list'); // no wave to point at: the card sits in a corner
   }
   function hideTip() { tip.hidden = true; tipFor = -1; tipPinned = false; }
   function placeTip(vt) {
@@ -871,6 +998,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       if (pinned < 0) { tip.style.visibility = 'hidden'; return; }
       if (tipFor !== pinned) showTip(pinned, true);
     }
+    if (view === 'list') { tip.style.visibility = 'visible'; return; }
     let x, y;
     if (tipPinned || !tipAt) {
       const p = posOf(tipFor, vt);
@@ -911,18 +1039,28 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   /** Pin the next (dir 1) or previous (dir -1) earthquake in time, loading years on the way as needed. */
   function stepQuake(dir) {
     if (!META) return;
-    const t0 = pinned >= 0 ? T[pinned] : centerTime();
-    let e = pinned >= 0 ? pinned + dir : lowerBound(T, t0) - (dir < 0 ? 1 : 0);
+    cancelJump();
+    const t0 = pinned >= 0 ? T[pinned] : view === 'list' ? listRowTime(Math.floor(listBox.scrollTop / LROW)) : centerTime();
+    const y0 = yearOf(t0);
+    if (META.years[y0] && !CHUNKS.has(y0) && yearCounts[y0 - firstYear]) {
+      ensureYear(y0).then(() => { if (CHUNKS.has(y0)) stepQuake(dir); });
+      return;
+    }
+    let e = pinned >= 0 ? pinned + dir : lowerBound(T, t0) - (view !== 'list' && dir < 0 ? 1 : 0);
     while (e >= 0 && e < N && !mask[e]) e += dir;
     const found = e >= 0 && e < N;
     const yEnd = yearOf(found ? T[e] : dir > 0 ? END : FIRST);
     for (let y = yearOf(t0); dir > 0 ? y <= yEnd : y >= yEnd; y += dir) {
       // a year not loaded yet may hold a closer earthquake: fetch it, then try again
-      if (META.years[y] && !CHUNKS.has(y)) { ensureYear(y).then(() => { if (CHUNKS.has(y)) stepQuake(dir); }); return; }
+      if (META.years[y] && !CHUNKS.has(y) && yearCounts[y - firstYear]) { ensureYear(y).then(() => { if (CHUNKS.has(y)) stepQuake(dir); }); return; }
     }
     if (!found) return;
-    const y = posOf(e, vTop()).y;
-    if (y < PADT || y > viewH - PADB) scrollToTime(T[e], 'center');
+    if (view === 'list') {
+      keepListEventVisible(e);
+    } else {
+      const y = posOf(e, vTop()).y;
+      if (y < PADT || y > viewH - PADB) scrollToTime(T[e], 'center');
+    }
     pin(e);
   }
   drum.addEventListener('keydown', (ev) => {
@@ -952,8 +1090,13 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     if (c && navigator.clipboard) { syncHash(); navigator.clipboard.writeText(location.href).then(() => { c.textContent = L.copied; }, () => {}); }
   });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('#about').open) unpin(); });
-  function pin(e) { pinned = e; pinnedId = E[e].id; showTip(e, true); schedule(); writeHash(); }
-  function unpin() { if (pinned < 0 && !pinnedId) return; pinned = -1; pinnedId = null; hideTip(); schedule(); writeHash(); }
+  function pin(e) {
+    cancelJump();
+    pinned = e; pinnedId = E[e].id; showTip(e, true);
+    if (view === 'list') keepListEventVisible(e);
+    schedule(); writeHash();
+  }
+  function unpin() { cancelJump(); if (pinned < 0 && !pinnedId) return; pinned = -1; pinnedId = null; hideTip(); schedule(); writeHash(); }
 
   /* ---------- the view in the URL: #s=span&m=magnitude&r=region, then q=earthquake or t=time ---------- */
   let booted = false, hashTimer = 0;
@@ -961,28 +1104,34 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     clearTimeout(hashTimer);
     if (!booted) return;
     const p = [];
+    if (view === 'list') p.push('v=list');
     if (span !== '3h') p.push('s=' + span);
     if (minMag !== 'all') p.push('m=' + minMag);
     if (region !== 'all') p.push('r=' + region);
-    if (pinnedId && /^\d{8}-/.test(pinnedId)) p.push('q=' + pinnedId);
-    else if (drum.scrollTop > 0) p.push('t=' + new Date(centerTime() * 1000).toISOString().slice(0, 13));
+    const sharedId = pendingJump ? pendingJump.id : pinnedId;
+    if (sharedId && /^\d{8}-/.test(sharedId)) p.push('q=' + sharedId);
+    else if (scroller().scrollTop > 0) p.push('t=' + new Date(centerTime() * 1000).toISOString().slice(0, 19));
     const h = p.length ? '#' + p.join('&') : '';
     if (h !== location.hash) history.replaceState(null, '', h || location.pathname + location.search);
   }
   function writeHash() { clearTimeout(hashTimer); hashTimer = setTimeout(syncHash, 250); }
   function applyHash() {
-    if (location.hash.length < 2) return;
+    if (!META || (!location.hash && !booted)) return;
     const p = new URLSearchParams(location.hash.slice(1));
     const s = SPANS[p.get('s')] ? p.get('s') : '3h';
     const m = ['2', '3', '4', '5'].includes(p.get('m')) ? p.get('m') : 'all';
     const r = ['0', '1', '2'].includes(p.get('r')) ? p.get('r') : 'all';
     if (m !== minMag || r !== region) { minMag = m; region = r; magSel.value = m; regSel.value = r; onFilter(); }
+    if ((p.get('v') === 'list' ? 'list' : 'drum') !== view) setView(p.get('v'), false);
     if (s !== span) setSpan(s);
-    const q = p.get('q') || '', ts = Date.parse((p.get('t') || '') + ':00Z') / 1000;
+    const q = p.get('q') || '', time = p.get('t') || '';
+    const ts = /^\d{4}-\d{2}-\d{2}T\d{2}(?::\d{2}){0,2}$/.test(time)
+      ? Date.parse(time + (time.length === 13 ? ':00:00Z' : time.length === 16 ? ':00Z' : 'Z')) / 1000 : NaN;
     const qt = Date.UTC(+q.slice(0, 4), +q.slice(4, 6) - 1, +q.slice(6, 8), 12) / 1000;
-    if (/^\d{8}-\w+$/.test(q) && Number.isFinite(qt)) { if (q !== pinnedId) jumpTo(qt, q); }
+    if (/^\d{8}-\w+$/.test(q) && Number.isFinite(qt)) jumpTo(qt, q);
     else if (Number.isFinite(ts)) { unpin(); scrollToTime(ts, 'center'); }
     else { unpin(); setVTop(0); }
+    schedule(); writeHash();
   }
   window.addEventListener('hashchange', applyHash);
 
@@ -1002,13 +1151,13 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     const d = { ArrowUp: yr, ArrowDown: -yr, PageUp: 10 * yr, PageDown: -10 * yr }[ev.key];
     if (d) { ev.preventDefault(); scrollToTime(Math.min(END, c + d), 'center'); }
     if (ev.key === 'Home') { ev.preventDefault(); setVTop(0); }
-    if (ev.key === 'End') { ev.preventDefault(); setVTop(maxTop); }
+    if (ev.key === 'End') { ev.preventDefault(); setVTop(Infinity); }
   });
 
   /* ---------- controls ---------- */
   function setSpan(s) {
     const tc = META ? centerTime() : null;
-    const atTop = drum.scrollTop === 0;
+    const atTop = scroller().scrollTop === 0;
     span = s; pref('seis.span', s); writeHash();
     document.querySelectorAll('#spans button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.span === s)));
     setupRows(); geometry();
@@ -1020,9 +1169,18 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   const magSel = $('#mag'), regSel = $('#region'), jumpSel = $('#jump');
   magSel.value = minMag; if (magSel.value !== minMag) { minMag = 'all'; magSel.value = 'all'; }
   regSel.value = region; if (regSel.value !== region) { region = 'all'; regSel.value = 'all'; }
-  const onFilter = () => { applyMask(); applyCounts(); writeHash(); };
-  magSel.addEventListener('change', () => { minMag = magSel.value; pref('seis.mag', minMag); onFilter(); });
-  regSel.addEventListener('change', () => { region = regSel.value; pref('seis.region', region); onFilter(); });
+  const onFilter = () => {
+    const t = META && view === 'list' && listBox.scrollTop > 0 ? centerTime() : null;
+    ++listJump;
+    applyMask(); applyCounts();
+    if (view === 'list') {
+      renderList();
+      if (t != null) scrollToTime(t, 'center'); else setVTop(0);
+    }
+    writeHash();
+  };
+  magSel.addEventListener('change', () => { cancelJump(); minMag = magSel.value; pref('seis.mag', minMag); onFilter(); });
+  regSel.addEventListener('change', () => { cancelJump(); region = regSel.value; pref('seis.region', region); onFilter(); });
 
   function buildJump() {
     let html = `<option value="">${L.jump}</option><option value="latest">${L.latest}</option><optgroup label="${L.largest}">`;
@@ -1032,20 +1190,197 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     html += `</optgroup><optgroup label="${L.decades}">`;
     for (let d = Math.floor(yearOf(END) / 10) * 10; d >= Math.floor(firstYear / 10) * 10; d -= 10) html += `<option value="d:${d}">${L.decade(d)}</option>`;
     jumpSel.innerHTML = html + `</optgroup><option value="first">${L.first}</option>`;
+    compactControls();
+  }
+  function compactControls() {
+    magSel.options[0].textContent = innerWidth <= 600 ? 'M' : L.mag;
+    jumpSel.options[0].textContent = innerWidth <= 600 ? L.jumpShort : L.jump;
+  }
+  let jumpRequest = 0, pendingJump = null;
+  function cancelJump() {
+    const changed = pendingJump !== null;
+    pendingJump = null; ++jumpRequest;
+    if (changed) writeHash();
+  }
+  function finishJump() {
+    if (!pendingJump || pendingJump.request !== jumpRequest) return false;
+    const e = E.findIndex((ev) => ev.id === pendingJump.id);
+    if (e < 0) return false;
+    pendingJump = null;
+    if (!mask[e]) {
+      minMag = 'all'; region = 'all'; magSel.value = 'all'; regSel.value = 'all';
+      pref('seis.mag', 'all'); pref('seis.region', 'all'); onFilter();
+    }
+    scrollToTime(E[e].t, 'center'); pin(e);
+    return true;
   }
   function jumpTo(t, id) {
+    unpin();
+    const request = ++jumpRequest;
+    if (id) pendingJump = { id, request };
     scrollToTime(t, 'center');
     if (!id) return;
     ensureYear(yearOf(t)).then(() => {
-      const e = E.findIndex((ev) => ev.id === id);
-      if (e < 0) return;
-      if (!mask[e]) {
-        minMag = 'all'; region = 'all'; magSel.value = 'all'; regSel.value = 'all';
-        pref('seis.mag', 'all'); pref('seis.region', 'all'); onFilter();
+      if (request !== jumpRequest || !pendingJump) return;
+      // Keep the requested ID in the address bar while a failed year is awaiting its retry.
+      if (CHUNKS.has(yearOf(t)) && !finishJump()) {
+        cancelJump(); writeHash();
       }
-      scrollToTime(E[e].t, 'center'); pin(e);
     });
   }
+
+  /* ---------- list view: every matching earthquake as a table, newest first ---------- */
+  // Only the rows on screen exist in the page. Each year is a block of rows: its earthquakes when
+  // the year is loaded, or as many rows as META says it has (fetched once the block is on screen).
+  const LROW = 48, LHEAD = 40;
+  const listGrid = listBox.querySelector('table');
+  let listYears = [], listTotal = 0, listDirty = true, listKey = '', listJump = 0;
+  function layoutList() {
+    if (!listDirty) return;
+    listDirty = false; listKey = '';
+    listYears = []; listTotal = 0;
+    if (!META) return;
+    for (let y = yearOf(END); y >= firstYear; y--) {
+      let idx = null, n;
+      if (CHUNKS.has(y) || !META.years[y]) {
+        idx = [];
+        for (let e = lowerBound(T, Date.UTC(y, 0, 1) / 1000), hi = lowerBound(T, Date.UTC(y + 1, 0, 1) / 1000); e < hi; e++) if (mask[e]) idx.push(e);
+        n = idx.length;
+      } else n = yearCounts[y - firstYear] || 0;
+      if (!n) continue;
+      listYears.push({ y, n, top: listTotal, idx });
+      listTotal += n;
+    }
+  }
+  function captureListAnchor() {
+    if (view !== 'list' || !META || listBox.scrollTop === 0) return null;
+    const row = Math.floor(listBox.scrollTop / LROW), t = listRowTime(row);
+    const e = lowerBound(T, t);
+    return { t, id: T[e] === t ? E[e].id : null, offset: listBox.scrollTop % LROW };
+  }
+  function restoreListAnchor(anchor) {
+    if (view !== 'list') return;
+    renderList(); // establish the full scroll height before moving into it
+    if (!anchor) return;
+    const e = anchor.id ? E.findIndex((ev) => ev.id === anchor.id) : -1;
+    listBox.scrollTop = listRowOf(e >= 0 && mask[e] ? T[e] : anchor.t) * LROW + anchor.offset;
+    schedule();
+  }
+  function placeListTime(t, align) {
+    layoutList(); renderList();
+    const offset = align === 'top' ? 0 : Math.max(0, listBox.clientHeight - LHEAD) / 3;
+    listBox.scrollTop = Math.max(0, listRowOf(t) * LROW + (align === 'top' ? 0 : LROW / 2) - offset);
+    schedule(); writeHash();
+  }
+  function keepListEventVisible(e) {
+    const top = listRowOf(T[e]) * LROW;
+    if (top < listBox.scrollTop || top + LROW > listBox.scrollTop + listBox.clientHeight - LHEAD) placeListTime(T[e], 'center');
+  }
+  const yearSpan = (y) => [Math.max(FIRST, Date.UTC(y, 0, 1) / 1000), Math.min(END, Date.UTC(y + 1, 0, 1) / 1000)];
+  /** The time of row r (0 = newest); estimated inside a year that is not loaded yet. */
+  function listRowTime(r) {
+    layoutList();
+    r = Math.max(0, Math.min(listTotal - 1, Math.floor(r)));
+    for (const b of listYears) {
+      if (r >= b.top + b.n) continue;
+      const k = Math.max(0, r - b.top);
+      if (b.idx) return T[b.idx[b.n - 1 - k]];
+      const [a, z] = yearSpan(b.y);
+      return z - ((k + 0.5) / b.n) * (z - a);
+    }
+    return FIRST;
+  }
+  /** The row showing the earthquake at time t, or the first row older than t. */
+  function listRowOf(t) {
+    layoutList();
+    const y = yearOf(t);
+    for (const b of listYears) {
+      if (b.y > y) continue;
+      if (b.y < y) return b.top;
+      if (b.idx) {
+        let lo = 0, hi = b.n; // how many of the year's earthquakes are at or before t
+        while (lo < hi) { const m = (lo + hi) >> 1; if (T[b.idx[m]] <= t) lo = m + 1; else hi = m; }
+        return b.top + Math.min(b.n - 1, b.n - lo);
+      }
+      const [a, z] = yearSpan(b.y);
+      return b.top + Math.min(b.n - 1, Math.floor(((z - t) / (z - a)) * b.n));
+    }
+    return Math.max(0, listTotal - 1);
+  }
+  function rowHTML(e, row) {
+    const ev = E[e], m = ev.m;
+    return `<tr id="quake-${e}" data-e="${e}" aria-rowindex="${row + 2}" aria-selected="${e === pinned}"${e === pinned ? ' class="on"' : ''}>` +
+      `<td>${fmtDate(ev.t)} <span class="tm">${fmtTime(ev.t)}</span></td>` +
+      `<td>${Number.isNaN(m) ? '<span class="na">–</span>' : `<b>${fmtDec(m, 1)}</b> <small>${esc(ev.mt || '')}</small>`}</td>` +
+      `<td title="${esc(placeName(ev.place) || REGION[ev.r])}">${esc(placeName(ev.place) || REGION[ev.r])}${ev.live ? `<em>${L.prelimShort}</em>` : ''}</td>` +
+      `<td class="opt">${REGION[ev.r]}</td><td class="opt">${ev.d != null ? `${ev.d} km` : ''}</td></tr>`;
+  }
+  function renderList() {
+    if (!META) return;
+    layoutList();
+    const st = listBox.scrollTop, H = listBox.clientHeight;
+    const va = Math.min(Math.max(0, listTotal - 1), Math.floor(st / LROW)), vb = Math.min(listTotal, Math.max(va + 1, Math.ceil((st + H - LHEAD) / LROW)));
+    const a = Math.max(0, va - 8), b = Math.min(listTotal, vb + 8);
+    const waiting = [];
+    for (const blk of listYears) if (!blk.idx && blk.top < vb && blk.top + blk.n > va) { waiting.push(blk.y); ensureYear(blk.y); }
+    const cols = innerWidth <= 900 ? 3 : 5;
+    const key = `${a}:${b}:${pinned}:${lang}:${cols}:${waiting.map((y) => FAILED.get(y) || 0).join(',')}`;
+    if (key !== listKey) { // layoutList clears the key whenever the data or the filters change
+      listKey = key;
+      const pad = (rows) => (rows > 0 ? `<tr class="pad" aria-hidden="true" style="height:${rows * LROW}px"><td colspan="${cols}"></td></tr>` : '');
+      let html = pad(a);
+      for (const blk of listYears) {
+        if (blk.top + blk.n <= a) continue;
+        if (blk.top >= b) break;
+        const k0 = Math.max(a, blk.top) - blk.top, k1 = Math.min(b, blk.top + blk.n) - blk.top;
+        if (blk.idx) for (let k = k0; k < k1; k++) html += rowHTML(blk.idx[blk.n - 1 - k], blk.top + k);
+        else html += `<tr class="wait" style="height:${(k1 - k0) * LROW}px"><td colspan="${cols}">${FAILED.has(blk.y) ? L.failedY(blk.y) : L.loadingY(blk.y) + '…'}</td></tr>`;
+      }
+      rowsEl.innerHTML = listTotal ? html + pad(listTotal - b) : `<tr class="wait" style="height:${LROW * 2}px"><td colspan="${cols}">${L.none}</td></tr>`;
+      listGrid.setAttribute('aria-rowcount', String(listTotal + 1));
+      if (pinned >= 0 && rowsEl.querySelector(`#quake-${pinned}`)) listGrid.setAttribute('aria-activedescendant', `quake-${pinned}`);
+      else listGrid.removeAttribute('aria-activedescendant');
+    }
+    const tB = listTotal ? listRowTime(va) : END, tA = listTotal ? listRowTime(Math.max(va, vb - 1)) : END;
+    const d0 = fmtDate(tA), d1 = fmtDate(tB);
+    $('#range').innerHTML = listTotal ? `<b>${d0 === d1 ? d1 : `${d0} – ${d1}`}</b>` : '';
+    const failed = waiting.filter((y) => FAILED.has(y));
+    $('#inview').textContent = failed.length ? L.failedY(failed[0]) : waiting.length ? L.loadingY(waiting[0]) + (waiting.length > 1 ? '…' : '') : '';
+    drawRail(tA, tB);
+    placeTip(0);
+  }
+  rowsEl.addEventListener('click', (ev) => {
+    const tr = ev.target.closest('tr[data-e]');
+    if (!tr) return;
+    listGrid.focus({ preventScroll: true });
+    const e = Number(tr.dataset.e);
+    if (e === pinned) unpin(); else pin(e);
+  });
+  listBox.addEventListener('scroll', () => { schedule(); writeHash(); }, { passive: true });
+  // A user's scroll takes precedence over an in-flight jump to an unloaded year.
+  for (const type of ['wheel', 'touchstart', 'pointerdown']) listBox.addEventListener(type, () => { ++listJump; cancelJump(); }, { passive: true });
+  listBox.addEventListener('keydown', (ev) => {
+    if (ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp') return;
+    ev.preventDefault();
+    stepQuake(ev.key === 'ArrowUp' ? 1 : -1); // up the list is later in time
+  });
+
+  /** Switch between the drum and the list, staying at the same moment in time. */
+  function setView(v, keep = true) {
+    v = v === 'list' ? 'list' : 'drum';
+    const t = keep && META ? pinned >= 0 ? T[pinned] : scroller().scrollTop > 0 ? centerTime() : null : null;
+    ++listJump;
+    view = v; pref('seis.view', v);
+    document.querySelectorAll('#views button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+    drum.hidden = v === 'list'; listBox.hidden = v !== 'list'; $('#spans').hidden = v === 'list';
+    main.classList.toggle('list-view', v === 'list');
+    hover = -1; listDirty = true;
+    if (pinned >= 0) showTip(pinned, true); else hideTip();
+    geometry();
+    if (t != null) scrollToTime(t, 'center'); else setVTop(0);
+    schedule(); writeHash();
+  }
+  document.querySelectorAll('#views button').forEach((b) => b.addEventListener('click', () => { if (b.dataset.view !== view) setView(b.dataset.view); }));
 
   /* ---------- latest earthquake ---------- */
   let latestEv = null, flashId = null;
@@ -1065,6 +1400,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   jumpSel.addEventListener('change', () => {
     const v = jumpSel.value; jumpSel.value = '';
     if (!v || !META) return;
+    unpin();
     if (v === 'latest') { setVTop(0); return; }
     if (v === 'first') {
       ensureYear(yearOf(META.first)).then(() => { const ev = E.find((x) => Math.round(x.t) === META.first) || E[0]; jumpTo(ev.t, ev.id); });
@@ -1081,18 +1417,31 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   });
 
   /* ---------- live: EMSC feed + fresh site data ---------- */
+  const dataAt = () => Math.max(META ? Date.parse(META.generated) || 0 : 0, ipmaAt, emscAt);
+  const current = () => navigator.onLine !== false && dataAt() > 0 && Date.now() - dataAt() < 3 * IPMA_POLL;
   function showFreshness() {
     const el = $('#freshness');
-    if (liveOn) { el.className = 'live'; el.textContent = L.live; el.title = L.liveTitle; return; }
-    el.className = ''; el.title = '';
-    el.textContent = META ? L.updated(ago(Math.max(Date.parse(META.generated), ipmaAt) / 1000)) : '';
+    const at = dataAt(), pending = !ipmaAt && !emscAt && !ipmaFailed;
+    const state = navigator.onLine === false ? 'offline' : current() ? 'current' : 'stale';
+    el.hidden = !META && state !== 'offline';
+    el.dataset.state = state;
+    el.className = state === 'current' && liveOn ? 'live' : '';
+    el.textContent = [state === 'offline' ? L.offline : state === 'stale' ? L.delayed : '', at ? L.updated(ago(at / 1000)) : ''].filter(Boolean).join(' · ');
+    const stamp = (t) => `${fmtDate(t / 1000)} ${fmtTime(t / 1000)} UTC`;
+    el.title = [
+      META ? L.catalogue(stamp(Date.parse(META.generated))) : '',
+      ipmaAt ? L.received('IPMA', stamp(ipmaAt)) : '',
+      ipmaFailed ? L.ipmaFailed : pending ? L.checking : '',
+      emscAt ? L.received('EMSC', stamp(emscAt)) : '',
+      liveOn && navigator.onLine !== false ? L.emscConnected : L.emscDisconnected,
+    ].filter(Boolean).join('\n');
   }
 
   let ws = null, wsTries = 0, wsEverOpen = false;
   function connectLive() {
-    if (!('WebSocket' in window) || ws) return;
+    if (!('WebSocket' in window) || ws || navigator.onLine === false) return;
     try { ws = new WebSocket(EMSC_WS); } catch (_) { ws = null; return; }
-    ws.onopen = () => { wsTries = 0; wsEverOpen = true; liveOn = true; showFreshness(); setEnd(Date.now() / 1000); };
+    ws.onopen = () => { wsTries = 0; wsEverOpen = true; liveOn = true; showFreshness(); if (current()) setEnd(Date.now() / 1000); };
     ws.onmessage = (m) => handleLive(m.data);
     ws.onclose = () => {
       ws = null; liveOn = false; showFreshness();
@@ -1107,7 +1456,10 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     const f = msg && msg.data, p = f && f.properties;
     if (!p) return;
     const unid = p.unid || f.id;
-    if (msg.action === 'delete') { if (LIVE.delete(unid)) rebuild(); return; }
+    if (msg.action === 'delete') {
+      if (LIVE.delete(unid)) { emscAt = Date.now(); rebuild(); showFreshness(); }
+      return;
+    }
     if (p.evtype && !/^(ke|se)$/.test(p.evtype)) return; // known or suspected earthquakes only
     const lat = Number(p.lat), lon = Number(p.lon), t = Date.parse(p.time) / 1000;
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(t)) return;
@@ -1121,19 +1473,20 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       r, d: p.depth == null ? null : Math.round(Number(p.depth)), lat, lon, place, s: 4, k: 'e:' + unid,
       felt: false, inten: null, live: true, seed: hashId(id),
     });
-    setEnd(Math.max(t, Date.now() / 1000));
-    rebuild();
+    emscAt = Date.now();
+    setEnd(Math.max(t, emscAt / 1000));
+    rebuild(); showFreshness();
   }
 
   /* ---------- IPMA's feed, read directly: the official record of the last ~30 days ---------- */
-  const current = () => liveOn || Date.now() - ipmaAt < 3 * IPMA_POLL; // is the page known to be up to date?
   let ipmaBusy = false;
   function loadIpma() {
-    if (!META || ipmaBusy) return;
+    if (!META || ipmaBusy || navigator.onLine === false) return;
     ipmaBusy = true;
     Promise.all([3, 7].map((area) => fetch(`${IPMA_FEED}${area}.json`, { cache: 'no-cache' })
       .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })))
       .then((areas) => {
+        if (areas.some((a) => !a || !Array.isArray(a.data))) throw new Error('Invalid IPMA feed');
         const first = ipmaAt === 0, seen = new Map();
         for (const d of areas.flatMap((a) => (Array.isArray(a.data) ? a.data : []))) {
           const lat = Number(d.lat), lon = Number(d.lon);
@@ -1158,10 +1511,11 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
         IPMA.clear();
         for (const [sid, ev] of seen) IPMA.set(sid, ev);
         ipmaAt = Date.now();
+        ipmaFailed = false;
         setEnd(ipmaAt / 1000);
         rebuild(); showFreshness();
       })
-      .catch(() => {})
+      .catch(() => { ipmaFailed = true; showFreshness(); })
       .finally(() => { ipmaBusy = false; });
   }
 
@@ -1188,13 +1542,24 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   }
 
   /* ---------- lifecycle ---------- */
+  for (const box of [drum, listBox]) {
+    for (const type of ['wheel', 'touchstart', 'pointerdown', 'keydown']) {
+      box.addEventListener(type, () => { navigationTime = null; }, { passive: true });
+    }
+  }
   drum.addEventListener('scroll', () => { schedule(); writeHash(); }, { passive: true });
+  let resizeFrame = 0;
   new ResizeObserver(() => {
-    const keep = META && drum.scrollTop !== 0 ? centerTime() : null;
-    geometry();
-    if (keep != null) scrollToTime(keep, 'center');
-    schedule();
-  }).observe(drum);
+    if (resizeFrame) return;
+    // Updating the controls can resize main again; finish outside the observer's delivery cycle.
+    resizeFrame = requestAnimationFrame(() => {
+      resizeFrame = 0;
+      const keep = META && scroller().scrollTop !== 0 ? centerTime() : null;
+      geometry(); compactControls();
+      if (keep != null) scrollToTime(keep, 'center');
+      schedule();
+    });
+  }).observe(main);
   const recolor = () => { readColors(); schedule(); };
   function applyLang() {
     L = I18N[lang]; MON = L.months; REGION = [L.r0, L.r1, L.r2];
@@ -1202,8 +1567,10 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = L[el.dataset.i18n]; });
     document.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', L[el.dataset.i18nAria]); });
     const lb = $('#lang'); lb.textContent = L.other; lb.setAttribute('aria-label', L.aLang);
+    document.querySelectorAll('#views button').forEach((b) => { b.title = b.getAttribute('aria-label'); });
+    listDirty = true;
     $('#aboutBody').innerHTML = L.aboutHTML(META ? yearOf(FIRST) : 1909);
-    if (META) { applyCounts(); buildJump(); } else { $('#range').textContent = L.loading; jumpSel.options[0].textContent = L.jump; }
+    if (META) { applyCounts(); buildJump(); } else { $('#range').textContent = navigator.onLine === false ? L.offlineLoad : L.loading; jumpSel.options[0].textContent = L.jump; }
     if (!tip.hidden && tipFor >= 0 && tipFor < N) tip.innerHTML = tipHTML(tipFor, tipPinned);
     showFreshness(); updateLatest(); schedule();
   }
@@ -1224,23 +1591,44 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   readColors();
   applyLang();
   document.querySelectorAll('#spans button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.span === span)));
-  setupRows(); geometry(); schedule();
+  setupRows(); setView(view, false);
 
-  loadMeta(true)
-    .then(() => {
-      applyHash(); booted = true;
-      ensureYear(Math.max(...Object.keys(META.years).map(Number))); // the latest earthquake is in the newest year
-      connectLive(); loadIpma();
-      setInterval(() => { loadMeta(false).catch(() => {}); }, META_POLL);
-      setInterval(() => { if (document.visibilityState === 'visible') loadIpma(); }, IPMA_POLL);
-      setInterval(() => { if (current()) setEnd(Date.now() / 1000); showFreshness(); updateLatest(); }, 30000);
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState !== 'visible') return;
-        loadMeta(false).catch(() => {}); loadIpma();
-        if (!ws && wsEverOpen) { wsTries = 0; connectLive(); }
-      });
-    })
-    .catch(() => { $('#range').textContent = L.loadError; });
+  let starting = false, bootRetry = 0;
+  function start() {
+    if (starting || booted) return;
+    clearTimeout(bootRetry);
+    if (navigator.onLine === false) { $('#range').textContent = L.offlineLoad; showFreshness(); return; }
+    starting = true;
+    loadMeta(true)
+      .then(() => {
+        applyHash(); booted = true;
+        ensureYear(Math.max(...Object.keys(META.years).map(Number))); // the latest earthquake is in the newest year
+        connectLive(); loadIpma();
+        setInterval(() => { if (navigator.onLine !== false) loadMeta(false).catch(() => {}); }, META_POLL);
+        setInterval(() => { if (document.visibilityState === 'visible') loadIpma(); }, IPMA_POLL);
+        setInterval(() => { if (current()) setEnd(Date.now() / 1000); showFreshness(); updateLatest(); }, 30000);
+      })
+      .catch(() => {
+        $('#range').textContent = navigator.onLine === false ? L.offlineLoad : L.loadError;
+        showFreshness(); bootRetry = setTimeout(start, META_POLL);
+      })
+      .finally(() => { starting = false; });
+  }
+  function reconnect() {
+    showFreshness();
+    if (!booted) { start(); return; }
+    loadMeta(false).catch(() => {}); loadIpma();
+    if (!ws) { wsTries = 0; connectLive(); }
+  }
+  window.addEventListener('offline', () => {
+    showFreshness();
+    if (!META) $('#range').textContent = L.offlineLoad;
+  });
+  window.addEventListener('online', reconnect);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && navigator.onLine !== false) reconnect();
+  });
+  start();
 })();
 </script>
 </body>

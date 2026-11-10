@@ -1,11 +1,14 @@
 # Terramotos Portugal
 
 Every recorded earthquake in mainland Portugal, the Azores and Madeira since 1909, drawn as a
-seismograph drum: newest line on top, scroll down to go back in time. New earthquakes appear live.
+seismograph drum: newest line on top, scroll down to go back in time. Switch to the list to browse
+individual earthquakes, newest first. Both views load years as needed. New earthquakes appear live.
 
 The page is in English and Portuguese, in light and dark. The address bar always holds a link to
-the current view (`#s=1d&m=3&r=1` for the line length and filters, then `q=` for a pinned
-earthquake or `t=` for a point in time), so any earthquake or moment can be shared.
+the current view (`#v=list` for the list, `s=1d&m=3&r=1` for the line length and filters, then `q=`
+for a pinned earthquake or `t=` for a UTC point in time), so any earthquake or moment can be shared.
+The timeline, filters and selected earthquake carry across views. Use left/right arrow keys on
+the drum or up/down in the list to select earthquakes; Escape closes the details.
 
 ## Sources
 
@@ -26,6 +29,10 @@ and stored in the page itself.
 ## How it stays up to date
 
 The page keeps itself current; the scheduled jobs keep the record.
+
+The status shows the last successful data update, with exact UTC times for each source on hover.
+After 15 minutes without fresh data it shows “Updates delayed”; losing the internet connection
+shows “Offline”. It retries when the connection returns, including after an offline first load.
 
 | When | Where | What it does |
 |---|---|---|
@@ -70,6 +77,24 @@ python3 update.py live --archive archive   # the same, also keeping the plain-fi
 python3 -m http.server 8000 --directory seismograph   # open http://localhost:8000
 python3 update.py csv portugal_earthquakes.csv        # every earthquake as a CSV
 ```
+
+## Browser checks
+
+With Node.js 24 LTS and Python 3 installed:
+
+```bash
+npm ci
+npx playwright install chromium webkit
+npm test
+```
+
+The suite starts its own server on port 8765 and uses a fixed catalogue and mocked feeds, so it
+does not need the downloaded dataset or an internet connection. It covers desktop Chromium,
+a 320px Android layout, and iPhone WebKit: links, filters, keyboard and touch selection, themes,
+translations, live updates, failed requests, and offline recovery.
+
+`.github/workflows/browser.yml` runs the checks on relevant pushes and pull requests, and keeps
+the report and failure traces for seven days. `npm run test:ui` opens the interactive test runner.
 
 ## Hosting on GitHub Pages
 
