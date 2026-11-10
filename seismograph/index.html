@@ -7,6 +7,7 @@
 <meta name="description" content="Every recorded earthquake in mainland Portugal, the Azores and Madeira since 1909, on a seismograph drum. Data from IPMA, the ISC Bulletin, EMSC and USGS.">
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#ffffff">
+<meta name="goatcounter" content="https://terramotos.goatcounter.com/count">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="alternate" type="application/rss+xml" title="Terramotos Portugal" href="rss.xml">
 <meta property="og:type" content="website">
@@ -387,6 +388,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   <div id="aboutBody"></div>
 </dialog>
 
+<script src="analytics.js"></script>
 <script>
 (() => {
   const $ = (s) => document.querySelector(s);
@@ -423,7 +425,8 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
           <li>Magnitudes are on mixed scales (ML, mb, Ms, Mw). IPMA's magnitude is used wherever IPMA reported one.</li>
         </ul>
         <p class="fine">Data from IPMA, the ISC Bulletin, EMSC and USGS. New earthquakes arrive live from EMSC and are preliminary until the catalogues confirm them. Map outlines from Natural Earth; plate boundaries from Bird (2003), as converted by Hugo Ahlenius, Nordpil; active faults from the GEM Global Active Faults Database (CC BY-SA 4.0); volcanoes from the Smithsonian Global Volcanism Program.</p>
-        <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Download the data</a> (CSV, free for non-commercial use with credit to the sources)</p>`,
+        <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Download the data</a> (CSV, free for non-commercial use with credit to the sources)</p>
+        <p class="fine" data-usage hidden>Cookieless usage counts by <a href="https://www.goatcounter.com/help/privacy" target="_blank" rel="noopener noreferrer">GoatCounter</a>. Respects Do Not Track and Global Privacy Control.</p>`,
       aView: 'View', vDrum: 'Seismograph', vList: 'List', vMap: 'Map', cTime: 'Time (UTC)', cPlace: 'Place', cDepth: 'Depth',
       lSizes: 'Magnitude 2, 4 and 6', lPlate: 'Plate boundaries', lFaults: 'Active faults', lVolc: 'Volcanoes', aLayers: 'Map layers',
       zIn: 'Zoom in', zOut: 'Zoom out', zReset: 'Show the whole region',
@@ -466,7 +469,8 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
           <li>As magnitudes estão em escalas diferentes (ML, mb, Ms, Mw). Usa-se a magnitude do IPMA sempre que o IPMA a publicou.</li>
         </ul>
         <p class="fine">Dados do IPMA, do boletim do ISC, do EMSC e do USGS. Os sismos novos chegam em direto do EMSC e são preliminares até os catálogos os confirmarem. Contornos do mapa: Natural Earth; limites de placas: Bird (2003), conversão de Hugo Ahlenius, Nordpil; falhas ativas: GEM Global Active Faults Database (CC BY-SA 4.0); vulcões: Smithsonian Global Volcanism Program.</p>
-        <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Descarregar os dados</a> (CSV, uso não comercial livre, com referência às fontes)</p>`,
+        <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Descarregar os dados</a> (CSV, uso não comercial livre, com referência às fontes)</p>
+        <p class="fine" data-usage hidden>Contagens de utilização sem cookies pelo <a href="https://www.goatcounter.com/help/privacy" target="_blank" rel="noopener noreferrer">GoatCounter</a>. Respeita Do Not Track e Global Privacy Control.</p>`,
       aView: 'Vista', vDrum: 'Sismógrafo', vList: 'Lista', vMap: 'Mapa', cTime: 'Hora (UTC)', cPlace: 'Local', cDepth: 'Profundidade',
       lSizes: 'Magnitude 2, 4 e 6', lPlate: 'Limites de placas', lFaults: 'Falhas ativas', lVolc: 'Vulcões', aLayers: 'Camadas do mapa',
       zIn: 'Aproximar', zOut: 'Afastar', zReset: 'Mostrar a região inteira',
@@ -1199,6 +1203,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
 
   /* ---------- the view in the URL: #s=span&m=magnitude&r=region, then q=earthquake or t=time ---------- */
   let booted = false, hashTimer = 0;
+  function countUsage() { if (booted) window.terramotosUsage?.count(view, lang); }
   function syncHash() {
     clearTimeout(hashTimer);
     if (!booted) return;
@@ -1901,7 +1906,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
       if (source === 'map') mapContextDirty = false;
       if (t != null) scrollToTime(t, 'center'); else setVTop(0);
     }
-    schedule(); writeHash();
+    schedule(); writeHash(); countUsage();
   }
   document.querySelectorAll('#views button').forEach((b) => b.addEventListener('click', () => { if (b.dataset.view !== view) setView(b.dataset.view); }));
 
@@ -2097,9 +2102,10 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     document.querySelectorAll('#views button').forEach((b) => { b.title = b.getAttribute('aria-label'); });
     listDirty = true;
     $('#aboutBody').innerHTML = L.aboutHTML(META ? yearOf(FIRST) : 1909);
+    $('#aboutBody [data-usage]').hidden = !window.terramotosUsage?.enabled;
     if (META) { applyCounts(); buildJump(); } else { $('#range').textContent = navigator.onLine === false ? L.offlineLoad : L.loading; jumpSel.options[0].textContent = L.jump; }
     if (!tip.hidden && tipFor >= 0 && tipFor < N) tip.innerHTML = tipHTML(tipFor, tipPinned);
-    showFreshness(); updateLatest(); schedule();
+    showFreshness(); updateLatest(); schedule(); countUsage();
   }
   const about = $('#about');
   $('#aboutBtn').addEventListener('click', () => about.showModal());
@@ -2128,7 +2134,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     starting = true;
     loadMeta(true)
       .then(() => {
-        applyHash(); booted = true;
+        applyHash(); booted = true; countUsage();
         ensureYear(Math.max(...Object.keys(META.years).map(Number))); // the latest earthquake is in the newest year
         connectLive(); loadIpma();
         setInterval(() => { if (navigator.onLine !== false) loadMeta(false).catch(() => {}); }, META_POLL);

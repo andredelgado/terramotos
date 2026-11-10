@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "test": "playwright test",
+    "test:analytics": "node --test tests/analytics.test.js",
     "test:ui": "playwright test --ui"
   },
   "devDependencies": {

@@ -89,6 +89,38 @@ The hourly job publishes it to GitHub Pages; it does not use the browser's live 
 The feed suggests a 60-minute refresh interval. When hosting elsewhere, pass
 `--site-url https://example.org/terramotos/` to set the absolute feed and earthquake links.
 
+## Usage counts
+
+The private dashboard is [terramotos.goatcounter.com](https://terramotos.goatcounter.com/).
+The production site sends cookieless counts using GoatCounter's
+[documented pixel endpoint](https://www.goatcounter.com/help/pixel); it does not load a third-party
+script. The endpoint is the public `goatcounter` meta tag in `seismograph/index.html`, not a secret.
+
+The dashboard's Pages section shows six paths:
+
+| View | Portuguese | English |
+|---|---|---|
+| Seismograph | `/pt/seismograph` | `/en/seismograph` |
+| List | `/pt/list` | `/en/list` |
+| Map | `/pt/map` | `/en/map` |
+
+Each combination is sent at most once per page open, after the catalogue loads and whenever the
+view or interface language changes. Shared links open directly into the right combination.
+Scrolling, filters, selected earthquakes, map dates and live updates do not produce extra counts.
+These are view/language usage counts: adding them together does not give unique people.
+GoatCounter also applies its own [visit deduplication](https://www.goatcounter.com/help/sessions).
+
+The counter does not read or write cookies or browser storage. Requests omit credentials and
+referrers, and do not include the actual page URL, query, hash, screen size or an identifier.
+GoatCounter still receives the IP address and normal browser headers needed for the request;
+its [privacy policy](https://www.goatcounter.com/help/privacy) describes its processing and optional
+data-collection settings. The About dialog links to that policy in both languages.
+
+Do Not Track and Global Privacy Control disable counting. Localhost, private previews, other
+GitHub Pages projects, automated browsers and embedded frames are excluded. Hidden or offline
+pages wait until visible and online. A blocked counter or failed request never blocks the page.
+Counts start with the first production deployment containing this integration.
+
 ## Where the data lives
 
 The archive is the database: plain files holding every record each source has given, one
@@ -135,6 +167,7 @@ For the browser checks, with Node.js 24 LTS and Python 3 installed:
 
 ```bash
 npm ci
+npm run test:analytics
 npx playwright install chromium webkit
 npm test
 ```
@@ -146,6 +179,8 @@ translations, live updates, failed requests, and offline recovery.
 
 `.github/workflows/browser.yml` runs the checks on relevant pushes and pull requests, and keeps
 the report and failure traces for seven days. `npm run test:ui` opens the interactive test runner.
+The analytics checks run with Node's test runner and mocked requests; they never send test visits
+to the real counter.
 
 ## Hosting on GitHub Pages
 
@@ -177,6 +212,7 @@ Things to know:
 - `quake/regions.py`: the three region outlines
 - `seismograph/index.html`: the page; it reads `seismograph/data/meta.json` and one file per year
   from `seismograph/data/years/`, loaded as you scroll
+- `seismograph/analytics.js`: cookieless counts for the view and language, enabled only in production
 
 ## The dataset
 
