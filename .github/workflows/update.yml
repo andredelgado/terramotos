@@ -1,0 +1,90 @@
+name: Update earthquakes
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # live: IPMA's feed + the last 2 days of EMSC
+    - cron: "23 3 * * *"     # daily: + the last 60 days of EMSC and USGS
+    - cron: "47 4 2 * *"     # monthly: + the last 3 years of the ISC Bulletin
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: What to fetch
+        type: choice
+        options: [live, daily, monthly, backfill]
+        default: live
+  push:
+    branches: [main]
+    paths: ["seismograph/index.html"]  # publish page changes right away
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: write   # to prune old copies of the database cache
+
+concurrency:
+  group: earthquakes
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore the database
+        uses: actions/cache/restore@v4
+        with:
+          path: data/quakes.sqlite
+          key: quakes-db-${{ github.run_id }}
+          restore-keys: quakes-db-
+
+      - name: Choose what to fetch
+        id: mode
+        run: |
+          case "${{ github.event_name }}:${{ github.event.schedule }}" in
+            workflow_dispatch:*)      mode="${{ inputs.mode }}" ;;
+            schedule:"23 3 * * *")    mode=daily ;;
+            schedule:"47 4 2 * *")    mode=monthly ;;
+            push:*)                   mode=export ;;
+            *)                        mode=live ;;
+          esac
+          # no database yet (first run, or the cache expired): rebuild everything
+          if [ ! -s data/quakes.sqlite ]; then mode=backfill; fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
+      - name: Update (${{ steps.mode.outputs.mode }})
+        run: python3 update.py ${{ steps.mode.outputs.mode }}
+
+      - name: Save the database
+        if: steps.mode.outputs.mode != 'export'
+        uses: actions/cache/save@v4
+        with:
+          path: data/quakes.sqlite
+          key: quakes-db-${{ github.run_id }}
+
+      - name: Remove older copies of the database
+        if: steps.mode.outputs.mode != 'export'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh cache list --key quakes-db- --sort created_at --order desc --limit 100 --json id --jq '.[3:][].id' \
+            | xargs -r -n1 gh cache delete || true
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: seismograph
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

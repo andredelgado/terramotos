@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sismógrafo Portugal</title>
+<meta name="description" content="Every recorded earthquake in mainland Portugal, the Azores and Madeira since 1909, on a seismograph drum. Data from IPMA, the ISC Bulletin, EMSC and USGS.">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@400;600&display=swap">
+<style>
+/* Layout: a helicorder drum filling the screen, newest line on top, with a year rail on the right for travelling back to 1909 */
+:root {
+  --paper: #e4e9e5;
+  --panel: #d8dfda;
+  --ink: #1c2421;
+  --trace: #47524c;
+  --grid: #cbd3ce;
+  --muted: #64706a;
+  --rule: #bfc8c2;
+  --quake: #bf2a1c;
+  --f-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1311; --panel: #171c19; --ink: #e1e7e3; --trace: #7b8881; --grid: #212825;
+    --muted: #8a968f; --rule: #2b332f; --quake: #ff5b47; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f1311; --panel: #171c19; --ink: #e1e7e3; --trace: #7b8881; --grid: #212825;
+  --muted: #8a968f; --rule: #2b332f; --quake: #ff5b47; color-scheme: dark;
+}
+
+html {
+  height: 100%; box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+[hidden] { display: none !important; }
+body {
+  margin: 0; height: 100%; box-sizing: border-box; overflow: hidden;
+  display: flex; flex-direction: column;
+  background: var(--paper); color: var(--ink);
+  font-family: var(--f-display); font-size: 15px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; padding-block: 14px 10px; }
+.title { min-width: 0; display: grid; gap: 2px; }
+h1 { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: 0.005em; line-height: 1.1; text-wrap: balance; }
+h1 .count { font-family: var(--f-mono); font-size: 13px; font-weight: 400; color: var(--muted); letter-spacing: 0; margin-left: 10px; white-space: nowrap; }
+.sub { margin: 0; color: var(--muted); font-size: 14px; max-width: 64ch; }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+.seg button {
+  font: 600 12px/1 var(--f-mono); letter-spacing: 0.02em; color: var(--muted);
+  background: transparent; border: 0; border-left: 1px solid var(--rule); padding: 7px 9px; cursor: pointer;
+}
+.seg button:first-child { border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.seg button:hover:not([aria-pressed="true"]) { color: var(--ink); }
+.field { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+select {
+  font: 13px var(--f-mono); color: var(--ink); background: var(--paper);
+  border: 1px solid var(--rule); border-radius: 3px; padding: 5px 6px; max-width: 46vw;
+}
+button:focus-visible, select:focus-visible, .drum:focus-visible, .rail:focus-visible, a:focus-visible { outline: 2px solid var(--quake); outline-offset: 1px; }
+
+.status {
+  display: flex; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap;
+  font: 12px var(--f-mono); color: var(--muted); padding-block: 6px; border-top: 1px solid var(--rule);
+  font-variant-numeric: tabular-nums;
+}
+.status b { color: var(--ink); font-weight: 600; }
+.status .right { display: flex; gap: 14px; }
+.live { color: var(--quake); font-weight: 600; }
+.live::before {
+  content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--quake); margin-right: 6px; vertical-align: 1px; animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .live::before { animation: none; } }
+
+main { flex: 1; min-height: 0; display: flex; gap: 10px; position: relative; }
+.drum { flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden; position: relative; scrollbar-width: thin; scrollbar-color: var(--rule) transparent; }
+.drum canvas { position: sticky; top: 0; display: block; cursor: crosshair; }
+.rail { flex: none; width: 54px; position: relative; cursor: ns-resize; touch-action: none; }
+.rail canvas { display: block; width: 100%; height: 100%; }
+
+.tip {
+  position: absolute; z-index: 5; width: max-content; max-width: min(300px, 80vw);
+  background: var(--panel); color: var(--ink); border: 1px solid var(--rule); border-radius: 4px;
+  padding: 10px 12px; font: 12px/1.45 var(--f-mono); pointer-events: none;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.14);
+}
+.tip.pinned { pointer-events: auto; }
+.tip .mag { font: 600 20px/1.1 var(--f-display); }
+.tip .mag small { font: 12px var(--f-mono); color: var(--muted); margin-left: 4px; }
+.tip .where { font-family: var(--f-display); font-size: 14px; margin-top: 4px; }
+.tip .meta, .tip .hint, .tip .src { color: var(--muted); }
+.tip .prelim { color: var(--quake); }
+.tip a { color: var(--quake); display: inline-block; margin-top: 6px; }
+.tip .close { position: absolute; top: 4px; right: 6px; background: none; border: 0; color: var(--muted); font: 16px var(--f-mono); cursor: pointer; padding: 2px 4px; }
+
+.legend {
+  display: flex; flex-wrap: wrap; gap: 6px 20px; align-items: center;
+  font-size: 13px; color: var(--muted); padding-block: 8px 12px; border-top: 1px solid var(--rule);
+}
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { flex: none; }
+.legend .faded { opacity: 0.45; }
+.legend .note { flex-basis: 100%; }
+
+@media (max-width: 640px) {
+  h1 { font-size: 22px; }
+  h1 .count { display: block; margin: 4px 0 0; }
+  .sub { font-size: 13px; }
+  .rail { width: 40px; }
+  .legend { font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="title">
+    <h1>Sismógrafo Portugal<span class="count"><span id="count">…</span> earthquakes</span></h1>
+    <p class="sub">Every recorded earthquake in mainland Portugal, the Azores and Madeira <span id="since">since 1909</span>. Newest line on top; <span id="lineSentence">each line is 3 hours</span>, read left to right.</p>
+  </div>
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Time per line" id="spans">
+      <button type="button" data-span="3h" aria-pressed="true">3 h</button>
+      <button type="button" data-span="1d" aria-pressed="false">Day</button>
+      <button type="button" data-span="1w" aria-pressed="false">Week</button>
+      <button type="button" data-span="1mo" aria-pressed="false">Month</button>
+      <button type="button" data-span="1y" aria-pressed="false">Year</button>
+    </div>
+    <label class="field">Mag
+      <select id="mag">
+        <option value="all">All</option>
+        <option value="2">≥ 2</option>
+        <option value="3">≥ 3</option>
+        <option value="4">≥ 4</option>
+        <option value="5">≥ 5</option>
+      </select>
+    </label>
+    <label class="field">Region
+      <select id="region">
+        <option value="all">All</option>
+        <option value="0">Mainland</option>
+        <option value="1">Azores</option>
+        <option value="2">Madeira</option>
+      </select>
+    </label>
+    <select id="jump" aria-label="Jump to">
+      <option value="">Jump to…</option>
+    </select>
+  </div>
+</header>
+
+<div class="status">
+  <span id="range">Loading earthquakes…</span>
+  <span class="right"><span id="freshness" aria-live="polite"></span><span id="inview"></span></span>
+</div>
+
+<main>
+  <div class="drum" id="drum" tabindex="0" aria-label="Seismograph drum. Each line is a slice of time; red waves are earthquakes. Scroll down to go back in time.">
+    <canvas id="drumCanvas"></canvas>
+    <div id="spacer"></div>
+  </div>
+  <div class="rail" id="railBox" tabindex="0" role="slider" aria-label="Timeline, newest at the top. Click or drag to travel in time." aria-valuemin="1909" aria-valuemax="2026" aria-valuenow="2026">
+    <canvas id="rail"></canvas>
+  </div>
+  <div class="tip" id="tip" hidden></div>
+</main>
+
+<footer class="legend">
+  <span><svg width="34" height="14" viewBox="0 0 34 14" aria-hidden="true"><path d="M0 7h6l1-1 1 2 1-1h2l1-5 1 10 1-8 1 6 1-4 1 3 1-2 1 1h12" fill="none" stroke="var(--quake)" stroke-width="1.2"/></svg>Earthquake: taller and longer means stronger</span>
+  <span class="faded"><svg width="34" height="14" viewBox="0 0 34 14" aria-hidden="true"><path d="M0 7h8l1-2 1 4 1-3 1 2 1-1h21" fill="none" stroke="var(--quake)" stroke-width="1.2"/></svg>No magnitude on record</span>
+  <span>Lines start at 00:00 UTC</span>
+  <span class="note" id="dataNote">Data: IPMA, ISC Bulletin, EMSC and USGS; new earthquakes appear live from the EMSC feed. IPMA's magnitude is used wherever IPMA reported one. Before the 1960s only large earthquakes were recorded, so older lines look quiet.</span>
+</footer>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const drum = $('#drum'), cv = $('#drumCanvas'), spacer = $('#spacer');
+  const railBox = $('#railBox'), railCv = $('#rail'), tip = $('#tip');
+  const ctx = cv.getContext('2d'), rctx = railCv.getContext('2d');
+
+  const ORIGIN = Date.UTC(1900, 0, 1) / 1000; // a Monday, so week rows start on Mondays
+  const MAXH = 8e6;                            // cap on the scrollable height (browser limits)
+  const EMSC_WS = 'wss://www.seismicportal.eu/standing_order/websocket';
+  const META_POLL = 120000;                    // ms between checks for new site data
+  const MATCH_S = 30, MATCH_KM = 100;          // same earthquake: this close in time and place
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const REGION = ['Mainland', 'Azores', 'Madeira'];
+  // shift: magnitude units taken off before sizing a wave; stretch: wave length factor.
+  // Longer lines pack more earthquakes, so small ones shrink to ticks and big ones still stand out.
+  const SPANS = {
+    '3h': { u: 10800, line: 'each line is 3 hours', shift: 0, stretch: 1 },
+    '1d': { u: 86400, line: 'each line is a day', shift: 0.4, stretch: 0.75 },
+    '1w': { u: 604800, line: 'each line is a week', shift: 1, stretch: 0.45 },
+    '1mo': { line: 'each line is a month', shift: 1.6, stretch: 0.28 },
+    '1y': { line: 'each line is a year', shift: 2.4, stretch: 0.14 },
+  };
+  // agency codes used by the ISC, EMSC and USGS for whoever measured the magnitude
+  const AGENCY = { LIS: 'IPMA', INMG: 'IPMA', IPMA: 'IPMA', PDA: 'Universidade dos Açores', MDD: 'IGN',
+    SVSA: 'SVSA (Azores monitoring)', PAS: 'Caltech',
+    EMSC: 'EMSC', ISC: 'ISC', ISCGEM: 'ISC-GEM', ISCGEMSUP: 'ISC-GEM', US: 'USGS', USGS: 'USGS', NEIC: 'USGS',
+    NEIS: 'USGS', GCMT: 'Global CMT', HRVD: 'Global CMT', GFZ: 'GFZ', BER: 'Univ. Bergen', CSEM: 'EMSC', ISS: 'ISS' };
+  const SOURCES = [[1, 'IPMA'], [2, 'ISC'], [4, 'EMSC'], [8, 'USGS']];
+  const pref = (k, v) => {
+    try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (_) {}
+    return null;
+  };
+
+  let span = SPANS[pref('seis.span')] ? pref('seis.span') : '3h';
+  let minMag = pref('seis.mag') || 'all';
+  let region = pref('seis.region') || 'all';
+
+  // data: META describes every year; CHUNKS holds the years loaded so far; LIVE the feed's new events
+  let META = null;
+  const CHUNKS = new Map(), LOADING = new Map(), LIVE = new Map();
+  let E = [], N = 0, T = new Float64Array(0), MAG = new Float32Array(0), REG = new Uint8Array(0);
+  let mask = new Uint8Array(0), cum = new Int32Array(1);
+  let END = Date.now() / 1000, FIRST = Date.UTC(1909, 0, 1) / 1000;
+  let yearCounts = [], yearMax = 1, firstYear = 1909, liveOn = false, loadError = false;
+
+  // geometry
+  let dpr = 1, W = 0, viewH = 0, ROWH = 20, G = 64, base = 0, nRows = 1, maxScroll = 0, maxTop = 0;
+  const PADT = 30, PADB = 30;
+  let hover = -1, pinned = -1, pinnedId = null, raf = 0, C = {};
+
+  /* ---------- rows ---------- */
+  function rowAbs(ts) {
+    const s = SPANS[span];
+    if (s.u) return Math.floor((ts - ORIGIN) / s.u);
+    const d = new Date(ts * 1000);
+    return span === '1mo' ? (d.getUTCFullYear() - 1900) * 12 + d.getUTCMonth() : d.getUTCFullYear() - 1900;
+  }
+  function startAbs(i) {
+    const s = SPANS[span];
+    if (s.u) return ORIGIN + i * s.u;
+    if (span === '1mo') return Date.UTC(1900 + Math.floor(i / 12), i % 12, 1) / 1000;
+    return Date.UTC(1900 + i, 0, 1) / 1000;
+  }
+  const lastRow = () => base + nRows - 1;
+  function setupRows() { base = rowAbs(FIRST); nRows = rowAbs(END) - base + 1; }
+
+  function label(i) {
+    const t = startAbs(i), d = new Date(t * 1000);
+    const Y = d.getUTCFullYear(), Mo = d.getUTCMonth(), Dd = d.getUTCDate(), h = d.getUTCHours();
+    switch (span) {
+      case '3h': return h === 0 ? [`${Dd}/${Mo + 1}`, 1] : [String(h).padStart(2, '0') + 'h', 0];
+      case '1d': return Dd === 1 ? [`${MON[Mo]} '${String(Y).slice(2)}`, 1] : [`${Dd}/${Mo + 1}`, 0];
+      case '1w': {
+        const e = new Date((t + 604799) * 1000).getUTCFullYear();
+        return e !== Y || (Mo === 0 && Dd === 1) ? [String(e), 1] : [`${Dd}/${Mo + 1}`, 0];
+      }
+      case '1mo': return Mo === 0 ? [String(Y), 1] : [MON[Mo], 0];
+      default: return [String(Y), Y % 10 === 0 ? 1 : 0];
+    }
+  }
+
+  /* ---------- helpers ---------- */
+  function lowerBound(arr, x) {
+    let lo = 0, hi = arr.length;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] < x) lo = m + 1; else hi = m; }
+    return lo;
+  }
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function hashId(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; }
+  const amp = (m) => {
+    const s = SPANS[span];
+    if (Number.isNaN(m)) return Math.max(1, 3 - s.shift);
+    return Math.min(ROWH * 6, Math.max(0.8, ROWH * 0.11 * Math.pow(10, 0.3 * (m - 1 - s.shift))));
+  };
+  const len = (m) => Math.max(3, (10 + 9 * (Number.isNaN(m) ? 1.5 : Math.max(0, m))) * SPANS[span].stretch);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmtNum = (n) => n.toLocaleString('en-GB');
+  const yearOf = (t) => new Date(t * 1000).getUTCFullYear();
+  const fmtDate = (t) => { const d = new Date(t * 1000); return `${d.getUTCDate()} ${MON[d.getUTCMonth()]} ${d.getUTCFullYear()}`; };
+  const fmtTime = (t) => new Date(t * 1000).toISOString().slice(11, 19);
+  function fmtRange(a, b) {
+    const da = new Date(a * 1000), db = new Date(b * 1000);
+    if (span === '1y') return da.getUTCFullYear() === db.getUTCFullYear() ? `${db.getUTCFullYear()}` : `${da.getUTCFullYear()} – ${db.getUTCFullYear()}`;
+    if (span === '1mo') return `${MON[da.getUTCMonth()]} ${da.getUTCFullYear()} – ${MON[db.getUTCMonth()]} ${db.getUTCFullYear()}`;
+    return `${fmtDate(a)} – ${fmtDate(b)}`;
+  }
+  function ago(t) {
+    const s = Math.max(0, Date.now() / 1000 - t);
+    if (s < 90) return 'just now';
+    if (s < 5400) return `${Math.round(s / 60)} min ago`;
+    if (s < 172800) return `${Math.round(s / 3600)} h ago`;
+    return `${Math.round(s / 86400)} days ago`;
+  }
+  function kmBetween(a, b) {
+    const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
+    const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
+    return 12742 * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+  function regionOf(lat, lon) {
+    if (!META) return -1;
+    for (let k = 0; k < META.polygons.length; k++) {
+      const poly = META.polygons[k];
+      let inside = false;
+      for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+        const [xi, yi] = poly[i], [xj, yj] = poly[j];
+        if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) inside = !inside;
+      }
+      if (inside) return k;
+    }
+    return -1;
+  }
+
+  function wave(p, e, x, y, A, L) {
+    const r = rng(Math.imul(E[e].seed, 747796405));
+    const sP = 0.24 * L, step = L < 12 ? 1 : 1.5;
+    p.moveTo(x, y);
+    let k = 0;
+    for (let dx = step; dx <= L; dx += step, k++) {
+      const env = dx < sP ? 0.08 + 0.2 * (dx / sP) : Math.exp(-(dx - sP) / (0.28 * L));
+      p.lineTo(x + dx, y + (k & 1 ? 1 : -1) * A * env * (0.3 + 0.7 * r()));
+    }
+    p.lineTo(x + L + step, y);
+  }
+
+  /* ---------- colours ---------- */
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    const v = (n) => cs.getPropertyValue(n).trim();
+    C = { paper: v('--paper'), panel: v('--panel'), ink: v('--ink'), trace: v('--trace'), grid: v('--grid'),
+          muted: v('--muted'), quake: v('--quake'), mono: v('--f-mono') };
+  }
+
+  /* ---------- data ---------- */
+  function decodeYear(p) {
+    const out = new Array(p.t.length);
+    const felt = new Set(p.felt), inten = new Map(p.intensity);
+    let acc = Date.UTC(p.year, 0, 1) / 1000;
+    for (let i = 0; i < p.t.length; i++) {
+      acc += p.t[i];
+      out[i] = {
+        id: p.id[i], t: acc, m: p.m[i] == null ? NaN : p.m[i] / 10,
+        mt: p.mtypes[p.mt[i]], au: p.authors[p.ma[i]], r: p.r[i], d: p.d[i],
+        lat: p.lat[i] / 100, lon: p.lon[i] / 100, place: p.places[p.p[i]], s: p.s[i], k: p.k[i],
+        felt: felt.has(i), inten: inten.get(i) || null, live: false, seed: hashId(p.id[i]),
+      };
+    }
+    return out;
+  }
+
+  const FAILED = new Map(); // year -> time of the last failed fetch
+  function ensureYear(y) {
+    if (!META || !META.years[y]) return Promise.resolve();
+    if (CHUNKS.has(y)) return Promise.resolve();
+    if (LOADING.has(y)) return LOADING.get(y);
+    if (Date.now() - (FAILED.get(y) || 0) < 20000) return Promise.resolve();
+    const pr = fetch(`data/years/${y}.json?v=${META.years[y].v}`)
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((p) => { FAILED.delete(y); CHUNKS.set(y, { v: META.years[y].v, events: decodeYear(p) }); rebuild(); })
+      .catch(() => { FAILED.set(y, Date.now()); loadError = true; setTimeout(schedule, 20500); })
+      .finally(() => { LOADING.delete(y); schedule(); });
+    LOADING.set(y, pr);
+    return pr;
+  }
+
+  /** Flatten the loaded years plus live events into the arrays the drawing uses. */
+  function rebuild() {
+    const stored = [];
+    for (const y of [...CHUNKS.keys()].sort((a, b) => a - b)) for (const ev of CHUNKS.get(y).events) stored.push(ev);
+    const ST = Float64Array.from(stored, (ev) => ev.t);
+    const list = stored.slice();
+    for (const [unid, ev] of LIVE) {
+      // drop a live event once the stored catalogue has it
+      let known = false;
+      for (let i = lowerBound(ST, ev.t - MATCH_S); i < stored.length && ST[i] <= ev.t + MATCH_S; i++) {
+        if (stored[i].k === ev.k || kmBetween(stored[i], ev) <= MATCH_KM) { known = true; break; }
+      }
+      if (known) LIVE.delete(unid); else list.push(ev);
+    }
+    if (list.length !== stored.length) list.sort((a, b) => a.t - b.t);
+    E = list; N = E.length;
+    T = Float64Array.from(E, (ev) => ev.t);
+    MAG = Float32Array.from(E, (ev) => ev.m);
+    REG = Uint8Array.from(E, (ev) => ev.r);
+    hover = -1;
+    if (!pinnedId) hideTip(); // indexes moved; a hover tip would point at the wrong event
+    pinned = pinnedId ? E.findIndex((ev) => ev.id === pinnedId) : -1;
+    if (pinnedId && pinned < 0 && !LOADING.size) unpin();
+    applyMask();
+  }
+
+  function applyMask() {
+    const mm = minMag === 'all' ? null : Number(minMag);
+    const rg = region === 'all' ? null : Number(region);
+    mask = new Uint8Array(N); cum = new Int32Array(N + 1);
+    for (let e = 0; e < N; e++) {
+      const ok = (rg === null || REG[e] === rg) && (mm === null || (!Number.isNaN(MAG[e]) && MAG[e] >= mm));
+      mask[e] = ok ? 1 : 0;
+      cum[e + 1] = cum[e] + mask[e];
+    }
+    if (pinned >= 0 && !mask[pinned]) unpin();
+    schedule();
+  }
+
+  /** Per-year totals for the rail and the header, from META's counts (no year files needed). */
+  function applyCounts() {
+    if (!META) return;
+    const mm = minMag === 'all' ? 0 : Number(minMag);
+    const rg = region === 'all' ? null : Number(region);
+    firstYear = yearOf(META.first);
+    const y1 = yearOf(END);
+    yearCounts = new Array(y1 - firstYear + 1).fill(0);
+    let total = 0;
+    for (const [y, regs] of Object.entries(META.counts)) {
+      let n = 0;
+      regs.forEach((b, r) => {
+        if (rg !== null && r !== rg) return;
+        b.forEach((c, k) => { if (mm === 0 || (k >= mm && k > 0)) n += c; });
+      });
+      if (Number(y) - firstYear < yearCounts.length) yearCounts[Number(y) - firstYear] = n;
+      total += n;
+    }
+    yearMax = Math.max(1, ...yearCounts);
+    $('#count').textContent = fmtNum(total);
+  }
+
+  /* ---------- geometry & scrolling ---------- */
+  function geometry() {
+    const narrow = window.innerWidth < 640;
+    ROWH = narrow ? 18 : 20;
+    G = narrow ? 44 : 64;
+    dpr = window.devicePixelRatio || 1;
+    viewH = drum.clientHeight;
+    W = drum.clientWidth;
+    const total = PADT + nRows * ROWH + PADB;
+    const Hs = Math.max(viewH, Math.min(total, MAXH));
+    spacer.style.height = (Hs - viewH) + 'px';
+    maxScroll = Hs - viewH;
+    maxTop = Math.max(0, total - viewH);
+    cv.style.width = W + 'px';
+    cv.style.height = viewH + 'px';
+    cv.width = Math.round(W * dpr);
+    cv.height = Math.round(viewH * dpr);
+    const rw = railBox.clientWidth, rh = railBox.clientHeight;
+    railCv.width = Math.round(rw * dpr);
+    railCv.height = Math.round(rh * dpr);
+  }
+  const vTop = () => (maxScroll > 0 ? (drum.scrollTop / maxScroll) * maxTop : 0);
+  const setVTop = (v) => { drum.scrollTop = maxTop > 0 ? (Math.max(0, Math.min(maxTop, v)) / maxTop) * maxScroll : 0; };
+  const yOf = (j, vt) => PADT + j * ROWH + ROWH / 2 - vt;
+
+  function centerTime() {
+    const vt = vTop();
+    const j = Math.max(0, Math.min(nRows - 1, Math.floor((vt + viewH / 2 - PADT) / ROWH)));
+    const i = lastRow() - j;
+    return (startAbs(i) + Math.min(END, startAbs(i + 1))) / 2;
+  }
+  function scrollToTime(t, align) {
+    const i = Math.max(base, Math.min(lastRow(), rowAbs(t)));
+    const j = lastRow() - i;
+    setVTop(align === 'top' ? PADT + j * ROWH - ROWH : PADT + j * ROWH + ROWH / 2 - viewH / 2);
+  }
+  function schedule() { if (!raf) raf = requestAnimationFrame(draw); }
+
+  /** Move the end of the record (the pen) forward, keeping the view where it was. */
+  function setEnd(t) {
+    if (t <= END) return;
+    const before = nRows, atTop = drum.scrollTop === 0, vt = vTop();
+    END = t; setupRows();
+    if (nRows !== before) {
+      geometry();
+      if (!atTop) setVTop(vt + (nRows - before) * ROWH);
+    }
+    schedule();
+  }
+
+  /* ---------- drawing ---------- */
+  function posOf(e, vt) {
+    const i = rowAbs(T[e]), j = lastRow() - i, s = startAbs(i), en = startAbs(i + 1);
+    const pw = Math.max(10, W - G - 6);
+    return { x: G + pw * (T[e] - s) / (en - s), y: yOf(j, vt) };
+  }
+
+  function draw() {
+    raf = 0;
+    if (!W || !viewH) return;
+    const vt = vTop();
+    const x0 = G, pw = Math.max(10, W - G - 6), last = lastRow();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = C.paper;
+    ctx.fillRect(0, 0, W, viewH);
+
+    // grid: six equal divisions of the line
+    ctx.beginPath();
+    for (let k = 0; k <= 6; k++) { const x = Math.round(x0 + pw * k / 6) + 0.5; ctx.moveTo(x, 0); ctx.lineTo(x, viewH); }
+    ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.stroke();
+
+    const jTop = Math.max(0, Math.floor((vt - PADT) / ROWH) - 1);
+    const jBot = Math.min(nRows - 1, Math.ceil((vt + viewH - PADT) / ROWH));
+
+    // labels
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
+    const fs = G < 60 ? 10 : 11;
+    for (let j = jTop; j <= jBot; j++) {
+      const [txt, bold] = label(last - j);
+      ctx.font = `${bold ? 600 : 400} ${fs}px ${C.mono}`;
+      ctx.fillStyle = bold ? C.ink : C.muted;
+      ctx.fillText(txt, x0 - 8, yOf(j, vt));
+    }
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x0, -400, pw, viewH + 800); ctx.clip();
+
+    // background traces (deterministic noise per line)
+    ctx.beginPath();
+    let pen = null;
+    for (let j = jTop; j <= jBot; j++) {
+      const i = last - j, y = yOf(j, vt);
+      let xe = x0 + pw;
+      if (i === last) {
+        const s = startAbs(i), e = startAbs(i + 1);
+        xe = x0 + pw * Math.min(1, (END - s) / (e - s));
+        pen = [xe, y];
+      }
+      const r = rng(Math.imul(i, 2654435761) ^ 0x9e3779b9);
+      let v = 0;
+      ctx.moveTo(x0, y);
+      for (let x = x0 + 1; x <= xe; x += 1) { v = 0.55 * v + 0.45 * (r() - 0.5); ctx.lineTo(x, y + v * 3); }
+    }
+    ctx.strokeStyle = C.trace; ctx.lineWidth = 0.8; ctx.stroke();
+
+    // earthquakes, including a few lines above and below so tall waves spill in
+    let inView = 0;
+    const jA = Math.max(0, jTop - 7), jB = Math.min(nRows - 1, jBot + 7);
+    const strong = new Path2D(), faint = new Path2D();
+    for (let j = jA; j <= jB; j++) {
+      const i = last - j, s = startAbs(i), en = startAbs(i + 1), y = yOf(j, vt);
+      const lo = lowerBound(T, s), hi = lowerBound(T, en);
+      if (j >= jTop && j <= jBot) inView += cum[hi] - cum[lo];
+      for (let e = lo; e < hi; e++) {
+        if (!mask[e]) continue;
+        const m = MAG[e];
+        wave(Number.isNaN(m) ? faint : strong, e, x0 + pw * (T[e] - s) / (en - s), y, amp(m), len(m));
+      }
+    }
+    ctx.lineWidth = 1; ctx.strokeStyle = C.quake;
+    ctx.globalAlpha = 0.45; ctx.stroke(faint);
+    ctx.globalAlpha = 1; ctx.stroke(strong);
+
+    const focus = pinned >= 0 ? pinned : hover;
+    if (focus >= 0 && focus < N && mask[focus]) {
+      const { x, y } = posOf(focus, vt);
+      const p = new Path2D();
+      wave(p, focus, x, y, amp(MAG[focus]), len(MAG[focus]));
+      ctx.lineWidth = 2.2; ctx.stroke(p);
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fillStyle = C.quake; ctx.fill();
+    }
+    ctx.restore();
+
+    if (pen) {
+      ctx.beginPath(); ctx.arc(pen[0], pen[1], 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = C.quake; ctx.fill();
+    }
+
+    // which years are on screen (plus a little either side); fetch any we don't have yet
+    const tA = startAbs(last - jBot), tB = Math.min(END, startAbs(last - jTop + 1)) - 1;
+    const waiting = [];
+    if (META) {
+      for (let y = yearOf(startAbs(last - jB)); y <= yearOf(Math.min(END, startAbs(last - jA + 1)) - 1); y++) {
+        if (META.years[y] && !CHUNKS.has(y)) { waiting.push(y); ensureYear(y); }
+      }
+      $('#range').innerHTML = `<b>${fmtRange(tA, tB)}</b>`;
+      const failed = waiting.filter((y) => FAILED.has(y));
+      $('#inview').textContent = failed.length ? `Couldn't load ${failed[0]}, retrying`
+        : waiting.length ? `Loading ${waiting[0]}${waiting.length > 1 ? '…' : ''}` : `${fmtNum(inView)} in view`;
+    }
+    drawRail(tA, tB);
+    placeTip(vt);
+  }
+
+  function drawRail(tA, tB) {
+    const rw = railBox.clientWidth, rh = railBox.clientHeight;
+    if (!rw || !rh) return;
+    rctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    rctx.fillStyle = C.paper; rctx.fillRect(0, 0, rw, rh);
+    const t0 = startAbs(base), spanT = END - t0;
+    const tY = (t) => ((END - t) / spanT) * rh;
+    const y1 = yearOf(END);
+    const labelW = rw < 50 ? 18 : 24;
+    const barMax = rw - labelW - 2;
+
+    rctx.fillStyle = C.trace; rctx.globalAlpha = 0.55;
+    for (let k = 0; k < yearCounts.length; k++) {
+      const c = yearCounts[k]; if (!c) continue;
+      const y = firstYear + k;
+      const ya = tY(Math.min(END, Date.UTC(y + 1, 0, 1) / 1000)), yb = tY(Math.max(t0, Date.UTC(y, 0, 1) / 1000));
+      const w = Math.max(1.5, (Math.log1p(c) / Math.log1p(yearMax)) * barMax);
+      rctx.fillRect(rw - w, ya, w, Math.max(1, yb - ya - 0.5));
+    }
+    rctx.globalAlpha = 1;
+
+    // decade ticks
+    const pxPerDecade = (10 * 365.25 * 86400 / spanT) * rh;
+    const step = pxPerDecade < 18 ? 20 : 10;
+    rctx.font = `${rw < 50 ? 9 : 10}px ${C.mono}`; rctx.textAlign = 'left'; rctx.textBaseline = 'bottom';
+    rctx.fillStyle = C.muted; rctx.strokeStyle = C.grid; rctx.lineWidth = 1;
+    for (let d = Math.ceil(firstYear / step) * step; d <= y1; d += step) {
+      const y = Math.round(tY(Date.UTC(d, 0, 1) / 1000)) + 0.5;
+      rctx.beginPath(); rctx.moveTo(0, y); rctx.lineTo(rw, y); rctx.stroke();
+      rctx.fillText(rw < 50 ? `'${String(d).slice(2)}` : String(d), 1, y - 1);
+    }
+
+    // where the drum is looking
+    const a = tY(tB), b = tY(tA);
+    const h = Math.max(3, b - a);
+    rctx.fillStyle = C.quake; rctx.globalAlpha = 0.16; rctx.fillRect(0, a, rw, h);
+    rctx.globalAlpha = 1; rctx.strokeStyle = C.quake; rctx.lineWidth = 1.5;
+    rctx.strokeRect(0.75, a, rw - 1.5, h);
+    railBox.setAttribute('aria-valuemin', String(firstYear));
+    railBox.setAttribute('aria-valuemax', String(y1));
+    railBox.setAttribute('aria-valuenow', String(yearOf(tB)));
+  }
+
+  /* ---------- tooltip ---------- */
+  function linkFor(k) {
+    if (k.startsWith('e:')) return [`https://www.seismicportal.eu/eventdetails.html?unid=${encodeURIComponent(k.slice(2))}`, 'Open on EMSC'];
+    if (k.startsWith('i:')) return [`https://www.isc.ac.uk/cgi-bin/web-db-run?event_id=${encodeURIComponent(k.slice(2))}&out_format=ISF2&request=COMPREHENSIVE`, 'Open in the ISC Bulletin'];
+    if (k.startsWith('u:')) return [`https://earthquake.usgs.gov/earthquakes/eventpage/${encodeURIComponent(k.slice(2))}`, 'Open on USGS'];
+    return ['https://www.ipma.pt/pt/geofisica/sismicidade/', 'Open IPMA seismicity'];
+  }
+  function tipHTML(e, isPinned) {
+    const ev = E[e], m = ev.m;
+    const src = SOURCES.filter(([b]) => ev.s & b).map(([, n]) => n).join(' · ');
+    const link = linkFor(ev.k);
+    const coords = `${Math.abs(ev.lat).toFixed(2)}°${ev.lat >= 0 ? 'N' : 'S'} ${Math.abs(ev.lon).toFixed(2)}°${ev.lon >= 0 ? 'E' : 'W'}`;
+    const meta = [REGION[ev.r], ev.d != null ? `${ev.d} km deep` : null, coords].filter(Boolean).join(' · ');
+    const feltLine = ev.inten ? `Felt, intensity ${ev.inten}` : ev.felt ? 'Felt' : '';
+    return (isPinned ? '<button class="close" type="button" aria-label="Close">×</button>' : '') +
+      `<div class="mag">${Number.isNaN(m) ? 'No magnitude' : `M ${m.toFixed(1)}`}${!Number.isNaN(m) && ev.mt ? `<small>${esc(ev.mt)}</small>` : ''}</div>` +
+      (!Number.isNaN(m) && ev.au ? `<div class="meta">Magnitude by ${esc(AGENCY[ev.au.toUpperCase()] || ev.au)}</div>` : '') +
+      `<div>${fmtDate(ev.t)} · ${fmtTime(ev.t)} UTC</div>` +
+      (ev.place ? `<div class="where">${esc(ev.place)}</div>` : '') +
+      (feltLine ? `<div>${esc(feltLine)}</div>` : '') +
+      `<div class="meta">${esc(meta)}</div>` +
+      (ev.live ? '<div class="prelim">Preliminary · EMSC live feed</div>' : `<div class="src">Source: ${esc(src)}</div>`) +
+      (isPinned ? `<a href="${link[0]}" target="_blank" rel="noopener">${link[1]} ↗</a>` : '<div class="hint">Click to pin and open details</div>');
+  }
+  let tipFor = -1, tipPinned = false, tipAt = null;
+  function showTip(e, isPinned, at) {
+    if (tipFor !== e || tipPinned !== isPinned || isPinned) tip.innerHTML = tipHTML(e, isPinned);
+    tipFor = e; tipPinned = isPinned; tipAt = at || null;
+    tip.classList.toggle('pinned', isPinned);
+    tip.hidden = false;
+  }
+  function hideTip() { tip.hidden = true; tipFor = -1; tipPinned = false; }
+  function placeTip(vt) {
+    if (tip.hidden) return;
+    if (tipPinned) {
+      if (pinned < 0) { tip.style.visibility = 'hidden'; return; }
+      if (tipFor !== pinned) showTip(pinned, true);
+    }
+    let x, y;
+    if (tipPinned || !tipAt) {
+      const p = posOf(tipFor, vt);
+      if (p.y < -10 || p.y > viewH + 10) { tip.style.visibility = 'hidden'; return; }
+      x = p.x; y = p.y;
+    } else { x = tipAt[0]; y = tipAt[1]; }
+    tip.style.visibility = 'visible';
+    const mainW = drum.parentElement.clientWidth, mainH = drum.parentElement.clientHeight;
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = x + 14, top = y + 14;
+    if (left + tw > mainW - 4) left = x - tw - 14;
+    if (top + th > mainH - 4) top = y - th - 14;
+    tip.style.left = Math.max(4, left) + 'px';
+    tip.style.top = Math.max(4, top) + 'px';
+  }
+
+  function hit(mx, my) {
+    const vt = vTop();
+    const j = Math.floor((my + vt - PADT) / ROWH);
+    if (j < 0 || j >= nRows) return -1;
+    const i = lastRow() - j, s = startAbs(i), en = startAbs(i + 1);
+    const pw = Math.max(10, W - G - 6);
+    let best = -1, bm = -99;
+    for (let e = lowerBound(T, s), hi = lowerBound(T, en); e < hi; e++) {
+      if (!mask[e]) continue;
+      const x = G + pw * (T[e] - s) / (en - s);
+      if (mx >= x - 4 && mx <= x + len(MAG[e])) {
+        const m = Number.isNaN(MAG[e]) ? -1 : MAG[e];
+        if (m > bm) { bm = m; best = e; }
+      }
+    }
+    return best;
+  }
+
+  cv.addEventListener('mousemove', (ev) => {
+    const r = cv.getBoundingClientRect();
+    const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+    const e = hit(mx, my);
+    if (e !== hover) { hover = e; schedule(); }
+    if (pinned >= 0) return;
+    if (e >= 0) { showTip(e, false, [mx, my]); placeTip(vTop()); } else hideTip();
+  });
+  cv.addEventListener('mouseleave', () => { hover = -1; if (pinned < 0) hideTip(); schedule(); });
+  cv.addEventListener('click', (ev) => {
+    const r = cv.getBoundingClientRect();
+    const e = hit(ev.clientX - r.left, ev.clientY - r.top);
+    if (e >= 0) pin(e); else unpin();
+  });
+  tip.addEventListener('click', (ev) => { if (ev.target.closest('.close')) unpin(); });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') unpin(); });
+  function pin(e) { pinned = e; pinnedId = E[e].id; showTip(e, true); schedule(); }
+  function unpin() { if (pinned < 0 && !pinnedId) return; pinned = -1; pinnedId = null; hideTip(); schedule(); }
+
+  /* ---------- rail ---------- */
+  let railDrag = false;
+  function railJump(ev) {
+    const r = railBox.getBoundingClientRect();
+    const f = Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height));
+    scrollToTime(END - f * (END - startAbs(base)), 'center');
+  }
+  railBox.addEventListener('pointerdown', (ev) => { railDrag = true; railBox.setPointerCapture(ev.pointerId); railJump(ev); });
+  railBox.addEventListener('pointermove', (ev) => { if (railDrag) railJump(ev); });
+  railBox.addEventListener('pointerup', () => { railDrag = false; });
+  railBox.addEventListener('pointercancel', () => { railDrag = false; });
+  railBox.addEventListener('keydown', (ev) => {
+    const yr = 365.25 * 86400, c = centerTime();
+    const d = { ArrowUp: yr, ArrowDown: -yr, PageUp: 10 * yr, PageDown: -10 * yr }[ev.key];
+    if (d) { ev.preventDefault(); scrollToTime(Math.min(END, c + d), 'center'); }
+    if (ev.key === 'Home') { ev.preventDefault(); setVTop(0); }
+    if (ev.key === 'End') { ev.preventDefault(); setVTop(maxTop); }
+  });
+
+  /* ---------- controls ---------- */
+  function setSpan(s) {
+    const tc = META ? centerTime() : null;
+    const atTop = drum.scrollTop === 0;
+    span = s; pref('seis.span', s);
+    document.querySelectorAll('#spans button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.span === s)));
+    $('#lineSentence').textContent = SPANS[s].line;
+    setupRows(); geometry();
+    if (atTop || tc == null) setVTop(0); else scrollToTime(tc, 'center');
+    schedule();
+  }
+  document.querySelectorAll('#spans button').forEach((b) => b.addEventListener('click', () => setSpan(b.dataset.span)));
+
+  const magSel = $('#mag'), regSel = $('#region'), jumpSel = $('#jump');
+  magSel.value = minMag; if (magSel.value !== minMag) { minMag = 'all'; magSel.value = 'all'; }
+  regSel.value = region; if (regSel.value !== region) { region = 'all'; regSel.value = 'all'; }
+  const onFilter = () => { applyMask(); applyCounts(); };
+  magSel.addEventListener('change', () => { minMag = magSel.value; pref('seis.mag', minMag); onFilter(); });
+  regSel.addEventListener('change', () => { region = regSel.value; pref('seis.region', region); onFilter(); });
+
+  function buildJump() {
+    let html = '<option value="">Jump to…</option><option value="latest">Latest</option><optgroup label="Largest earthquakes">';
+    META.largest.slice(0, 10).forEach((q, i) => {
+      html += `<option value="L:${i}">M${q.m.toFixed(1)} · ${fmtDate(q.t)} · ${esc(q.place || REGION[q.r])}</option>`;
+    });
+    html += '</optgroup><optgroup label="Decades">';
+    for (let d = Math.floor(yearOf(END) / 10) * 10; d >= Math.floor(firstYear / 10) * 10; d -= 10) html += `<option value="d:${d}">${d}s</option>`;
+    jumpSel.innerHTML = html + '</optgroup><option value="first">First earthquake on record</option>';
+  }
+  function jumpTo(t, id) {
+    scrollToTime(t, 'center');
+    if (!id) return;
+    ensureYear(yearOf(t)).then(() => {
+      const e = E.findIndex((ev) => ev.id === id);
+      if (e < 0) return;
+      if (!mask[e]) {
+        minMag = 'all'; region = 'all'; magSel.value = 'all'; regSel.value = 'all';
+        pref('seis.mag', 'all'); pref('seis.region', 'all'); onFilter();
+      }
+      scrollToTime(t, 'center'); pin(e);
+    });
+  }
+  jumpSel.addEventListener('change', () => {
+    const v = jumpSel.value; jumpSel.value = '';
+    if (!v || !META) return;
+    if (v === 'latest') { setVTop(0); return; }
+    if (v === 'first') {
+      ensureYear(yearOf(META.first)).then(() => { const ev = E.find((x) => Math.round(x.t) === META.first) || E[0]; jumpTo(ev.t, ev.id); });
+      scrollToTime(META.first, 'center');
+      return;
+    }
+    if (v.startsWith('d:')) {
+      const d = Number(v.slice(2));
+      scrollToTime(Math.min(END, Date.UTC(d + 10, 0, 1) / 1000 - 1), 'top');
+      return;
+    }
+    const q = META.largest[Number(v.slice(2))];
+    jumpTo(q.t, q.id);
+  });
+
+  /* ---------- live: EMSC feed + fresh site data ---------- */
+  function showFreshness() {
+    const el = $('#freshness');
+    if (liveOn) { el.className = 'live'; el.textContent = 'Live'; el.title = 'Connected to the EMSC live feed'; return; }
+    el.className = ''; el.title = '';
+    el.textContent = META ? `Updated ${ago(Date.parse(META.generated) / 1000)}` : '';
+  }
+
+  let ws = null, wsTries = 0, wsEverOpen = false;
+  function connectLive() {
+    if (!('WebSocket' in window) || ws) return;
+    try { ws = new WebSocket(EMSC_WS); } catch (_) { ws = null; return; }
+    ws.onopen = () => { wsTries = 0; wsEverOpen = true; liveOn = true; showFreshness(); setEnd(Date.now() / 1000); };
+    ws.onmessage = (m) => handleLive(m.data);
+    ws.onclose = () => {
+      ws = null; liveOn = false; showFreshness();
+      // keep retrying a feed that worked before; give up quickly on one that never opened
+      if (wsTries < (wsEverOpen ? 12 : 3)) setTimeout(connectLive, Math.min(60000, 3000 * 2 ** wsTries++));
+    };
+    ws.onerror = () => {};
+  }
+  function handleLive(raw) {
+    let msg;
+    try { msg = JSON.parse(raw); } catch (_) { return; }
+    const f = msg && msg.data, p = f && f.properties;
+    if (!p) return;
+    const unid = p.unid || f.id;
+    if (msg.action === 'delete') { if (LIVE.delete(unid)) rebuild(); return; }
+    if (p.evtype && !/^(ke|se)$/.test(p.evtype)) return; // known or suspected earthquakes only
+    const lat = Number(p.lat), lon = Number(p.lon), t = Date.parse(p.time) / 1000;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(t)) return;
+    const r = regionOf(lat, lon);
+    if (r < 0 || t < Date.now() / 1000 - 3 * 86400) return;
+    const id = 'emsc-' + unid;
+    const place = String(p.flynn_region || '').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+    LIVE.set(unid, {
+      id, t, m: p.mag == null ? NaN : Number(p.mag), mt: String(p.magtype || '').toUpperCase(), au: p.auth || 'EMSC',
+      r, d: p.depth == null ? null : Math.round(Number(p.depth)), lat, lon, place, s: 4, k: 'e:' + unid,
+      felt: false, inten: null, live: true, seed: hashId(id),
+    });
+    setEnd(Math.max(t, Date.now() / 1000));
+    rebuild();
+  }
+
+  // local testing only: feed fake live-feed messages from the console
+  if (location.hostname === 'localhost') window.__sismografo = { handleLive: (msg) => handleLive(JSON.stringify(msg)), live: LIVE };
+
+  function applyMeta(m, first) {
+    META = m;
+    FIRST = META.first;
+    const gen = Date.parse(META.generated) / 1000;
+    if (first) { END = Math.max(gen, FIRST + 1); setupRows(); geometry(); setVTop(0); }
+    else setEnd(gen);
+    applyCounts(); buildJump();
+    $('#since').textContent = `since ${yearOf(FIRST)}`;
+    // reload any year we hold whose file changed
+    let changed = false;
+    for (const [y, c] of CHUNKS) if (!META.years[y] || META.years[y].v !== c.v) { CHUNKS.delete(y); changed = true; }
+    if (changed) rebuild();
+    showFreshness(); schedule();
+  }
+  function loadMeta(first) {
+    return fetch('data/meta.json', { cache: 'no-cache' })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((m) => { if (first || !META || m.generated !== META.generated) applyMeta(m, first); });
+  }
+
+  /* ---------- lifecycle ---------- */
+  drum.addEventListener('scroll', schedule, { passive: true });
+  new ResizeObserver(() => {
+    const keep = META && drum.scrollTop !== 0 ? centerTime() : null;
+    geometry();
+    if (keep != null) scrollToTime(keep, 'center');
+    schedule();
+  }).observe(drum);
+  const recolor = () => { readColors(); schedule(); };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', recolor);
+  new MutationObserver(recolor).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  if (document.fonts) document.fonts.ready.then(schedule);
+
+  readColors();
+  document.querySelectorAll('#spans button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.span === span)));
+  $('#lineSentence').textContent = SPANS[span].line;
+  setupRows(); geometry(); schedule();
+
+  loadMeta(true)
+    .then(() => {
+      connectLive();
+      setInterval(() => { loadMeta(false).catch(() => {}); }, META_POLL);
+      setInterval(() => { if (liveOn) setEnd(Date.now() / 1000); showFreshness(); }, 30000);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        loadMeta(false).catch(() => {});
+        if (!ws && wsEverOpen) { wsTries = 0; connectLive(); }
+      });
+    })
+    .catch(() => { $('#range').textContent = "Couldn't load the earthquake data. Reload the page to try again."; });
+})();
+</script>
+</body>
+</html>
