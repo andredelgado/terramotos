@@ -12,7 +12,7 @@ import { playChrome } from './map/play.js';
 import { S } from './state.js';
 import { setStatsPeriod, statsPeriod } from './stats.js';
 import { applyCounts, ensureYear, N } from './store.js';
-import { renderStory, storyDlg } from './stories.js';
+import { pageDlg, renderPage } from './page.js';
 import { readColors } from './theme.js';
 import { applyHash, countUsage, writeHash } from './url.js';
 import { pref, yearOf } from './util.js';
@@ -59,7 +59,7 @@ function applyLang() {
   if (S.META) { applyCounts(); buildJump(); } else { $('#range').textContent = navigator.onLine === false ? L.offlineLoad : L.loading; jumpSel.options[0].textContent = L.jump; }
   if (!tip.hidden && tipFor >= 0 && tipFor < N) tip.innerHTML = tipHTML(tipFor, tipPinned);
   S.statsKey = ''; showColour(); playChrome();
-  if (storyDlg.open) renderStory();
+  if (pageDlg.open) renderPage();
   showFreshness(); updateLatest(); schedule(); countUsage();
 }
 const about = $('#about');

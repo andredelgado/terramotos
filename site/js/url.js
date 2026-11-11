@@ -1,19 +1,18 @@
 // The view in the address bar, so any state can be shared and restored.
 import { MAP_PERIODS, SPANS, STAT_PERIODS, VIEWS } from './config.js';
-import { STORIES } from './content/stories.js';
 import { jumpTo, onFilter, pendingJump, setSpan, span } from './controls.js';
 import { magSel, regSel } from './dom.js';
 import { centerTime, schedule, scrollToTime, setVTop } from './drum.js';
 import { lang } from './i18n.js';
 import { mapColour, setColour } from './map/colour.js';
 import { chooseMapPeriod, mapLive, parseMapDate, setMapRange } from './map/period.js';
+import { openPage, pageDlg, pageOpen } from './page.js';
 import { pinnedId, unpin } from './selection.js';
 import { S } from './state.js';
 import { setStatsPeriod, statsPeriod } from './stats.js';
-import { openStory, storyDlg, storyOpen } from './stories.js';
 import { scroller, setView, view } from './views.js';
 
-/* ---------- the view in the URL: #s=span&m=magnitude&r=region, then q=earthquake or t=time ---------- */
+/* ---------- the view in the URL: #s=span&m=magnitude&r=region, then q=earthquake or t=time, and page=earthquake ---------- */
 S.booted = false;
 let hashTimer = 0;
 export function countUsage() { if (S.booted) window.terramotosUsage?.count(view, lang); }
@@ -32,7 +31,7 @@ export function viewHash(fixedMap = false) {
   const sharedId = pendingJump ? pendingJump.id : pinnedId;
   if (sharedId && /^\d{8}-/.test(sharedId)) p.push('q=' + sharedId);
   else if (view !== 'map' && view !== 'stats' && scroller().scrollTop > 0) p.push('t=' + new Date(centerTime() * 1000).toISOString().slice(0, 19));
-  if (storyOpen) p.push('story=' + storyOpen);
+  if (pageOpen) p.push('page=' + pageOpen);
   return p.length ? '#' + p.join('&') : '';
 }
 function syncHash() {
@@ -58,8 +57,8 @@ export function applyHash() {
   else if (view === 'map') chooseMapPeriod(p.get('period') === 'all' || Object.hasOwn(MAP_PERIODS, p.get('period')) ? p.get('period') : '24h');
   if (view === 'map' && ['depth', 'age'].includes(p.get('c'))) setColour(p.get('c'));
   if (view === 'stats') setStatsPeriod(Object.hasOwn(STAT_PERIODS, p.get('sp')) ? p.get('sp') : 'all');
-  const story = p.get('story');
-  if (STORIES.some((st) => st.key === story)) openStory(story); else if (storyDlg.open) storyDlg.close();
+  const page = p.get('page') || p.get('story'); // story= is the older form, with a short key
+  if (page) openPage(page); else if (pageDlg.open) pageDlg.close();
   if (view === 'stats') { unpin(); schedule(); writeHash(); return; }
   const q = p.get('q') || '', time = p.get('t') || '';
   const ts = /^\d{4}-\d{2}-\d{2}T\d{2}(?::\d{2}){0,2}$/.test(time)

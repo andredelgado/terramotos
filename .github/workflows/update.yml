@@ -22,7 +22,7 @@ on:
         default: live
   push:
     branches: [main]
-    paths: ["site/**", "quake/**", "update.py", ".github/workflows/update.yml"]
+    paths: ["site/**", "content/**", "tools/build_content.py", "quake/**", "update.py", ".github/workflows/update.yml"]
 
 permissions:
   contents: write  # to commit to the data branch
@@ -105,6 +105,9 @@ jobs:
           else
             gh release create dataset dist/terramotos-portugal.zip --title "Dataset" --notes "$notes"
           fi
+
+      - name: Build the earthquake pages' text
+        run: python3 tools/build_content.py
 
       # Browsers keep a file for ten minutes. Giving the modules and the stylesheet a new address
       # whenever the code changes means nobody runs a mix of old and new files after a release.

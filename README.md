@@ -31,8 +31,13 @@ and writes the magnitude on those of 5 or more.
 filters match: earthquakes and energy per year, month or day, the spread of magnitudes and the
 busiest days. Bars and days open on the seismograph. Energy is an estimate, log E = 1.5 M + 4.8.
 
-**Stories** (`#story=1909|1969|1980|1998`) are four short bilingual texts in
-`site/js/content/stories.js`, each with links that open the seismograph, the map and the list at that earthquake.
+**Earthquake pages** (`#page=<id>`): every earthquake in the catalogue has a page with its
+details, a locator map, the other earthquakes within 50 km in the week before and after, and links
+that open the seismograph, the map and the list at that earthquake. It opens from the card
+("Details"). An earthquake with a text of its own is a **story**: the text is a Markdown file in
+`content/quakes/`, one per language, and those earthquakes are listed under Stories in the footer
+and the Jump menu. See [content/README.md](content/README.md) for the format. Older `#story=`
+links still open.
 
 That geography is `site/map.json` (25 KB), fetched the first time the map is opened, and
 `site/faults.json` (22 KB), fetched only when the faults are switched on. Both are built by
@@ -246,11 +251,13 @@ Things to know:
   everything else is imported by name. One module per concern: `store.js` (the catalogue in
   memory), `feeds.js` (IPMA, EMSC and the site's own data), `drum.js`, `list.js`, `stats.js` and
   `map/` (the views), `card.js`, `selection.js`, `url.js`, `controls.js`, `views.js`, `theme.js`,
-  `i18n.js` with `text.js` (every string, in both languages), and `content/` (the stories and
-  the locator coastlines). Each file starts with a line saying what it is for.
+  `page.js` (the earthquake page), `i18n.js` with `text.js` (every string, in both languages),
+  and `content/land.js` (the locator coastlines). Each file starts with a line saying what it is for.
   `npm run lint` checks that every name is imported and that no module writes to another's
   variables. When the site is published, the workflow gives `js/` and `app.css` an address that
   changes with their content, so browsers never mix old and new files.
+- `content/quakes/`: the stories, as Markdown; `tools/build_content.py` turns them into
+  `site/content/` (an index and one HTML fragment per text)
 - `site/analytics.js`: cookieless counts for the view and language, enabled only in production
 
 ## The dataset

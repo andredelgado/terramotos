@@ -179,7 +179,9 @@ export function renderMap() {
   ensureYears(waiting);
   if (play.on) { // the clock stands still while years are loading
     const now = performance.now();
-    if (play.last && !waiting.length) play.t = playTime(Math.min(1, playFrac(play.t) + (now - play.last) / 1000 / playSeconds()));
+    // play.f is kept between frames: reading it back from play.t would jump past each earthquake
+    if (!play.last) play.f = playFrac(play.t);
+    else if (!waiting.length) { play.f = Math.min(1, play.f + (now - play.last) / 1000 / playSeconds()); play.t = playTime(play.f); }
     play.last = now;
     if (play.t >= S.mapTo) stopPlay(); else schedule();
   }

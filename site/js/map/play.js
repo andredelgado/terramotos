@@ -8,8 +8,8 @@ import { cum, T } from '../store.js';
 import { lowerBound } from '../util.js';
 
 // Playback: the map fills in from the start of its period to the end. play.t is the moment
-// shown, or null when the whole period is on the map.
-export const play = { on: false, t: null, last: 0 };
+// shown, or null when the whole period is on the map; play.f is how far through the playback it is.
+export const play = { on: false, t: null, f: 0, last: 0 };
 const playBtn = $('#playBtn'), scrub = $('#scrub');
 export const playSeconds = () => { const d = Math.log10(Math.max(1, (S.mapTo - S.mapFrom) / 86400)); return Math.min(60, 10 + 3 * d * d); };
 // The playhead is paced half by time and half by earthquakes, so that quiet decades pass quickly

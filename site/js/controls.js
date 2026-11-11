@@ -1,14 +1,13 @@
 // Line length, filters and the Jump menu.
 import { SPANS } from './config.js';
-import { STORIES } from './content/stories.js';
 import { jumpSel, listBox, magSel, regSel } from './dom.js';
 import { centerTime, geometry, schedule, scrollToTime, setupRows, setVTop } from './drum.js';
-import { fmtDate, fmtDec, L, lang, placeName, REGION } from './i18n.js';
+import { fmtDate, fmtDec, L, placeName, REGION } from './i18n.js';
 import { renderList } from './list.js';
 import { pin, unpin } from './selection.js';
 import { S } from './state.js';
 import { applyCounts, applyMask, CHUNKS, E, ensureYear, firstYear, mask } from './store.js';
-import { openStory } from './stories.js';
+import { openPage, storyTitles } from './page.js';
 import { writeHash } from './url.js';
 import { esc, pref, yearOf } from './util.js';
 import { scroller, view } from './views.js';
@@ -50,8 +49,9 @@ export function buildJump() {
   });
   html += `</optgroup><optgroup label="${L.decades}">`;
   for (let d = Math.floor(yearOf(S.END) / 10) * 10; d >= Math.floor(firstYear / 10) * 10; d -= 10) html += `<option value="d:${d}">${L.decade(d)}</option>`;
-  html += `</optgroup><optgroup label="${L.stories}">`;
-  for (const st of STORIES) html += `<option value="S:${st.key}">${esc(st[lang].title)}</option>`;
+  const stories = storyTitles(); // empty until the list of texts has arrived
+  if (stories.length) html += `</optgroup><optgroup label="${L.stories}">`;
+  for (const [id, title] of stories) html += `<option value="S:${id}">${esc(title)}</option>`;
   jumpSel.innerHTML = html + `</optgroup><option value="first">${L.first}</option>`;
   compactControls();
 }
@@ -96,7 +96,7 @@ export function jumpTo(t, id) {
 jumpSel.addEventListener('change', () => {
   const v = jumpSel.value; jumpSel.value = '';
   if (!v || !S.META) return;
-  if (v.startsWith('S:')) { openStory(v.slice(2)); return; }
+  if (v.startsWith('S:')) { openPage(v.slice(2)); return; }
   S.mapContextDirty = true;
   unpin();
   if (v === 'latest') { setVTop(0); return; }

@@ -1,27 +1,26 @@
 // The details card (and hover tooltip) for one earthquake.
 import { SOURCES } from './config.js';
 import { LAND } from './content/land.js';
-import { STORIES } from './content/stories.js';
 import { drum, tip } from './dom.js';
 import { posOf, viewH } from './drum.js';
 import { agencyName, fmtDate, fmtDec, fmtTime, L, placeName, REGION } from './i18n.js';
 import { unpin } from './selection.js';
 import { S } from './state.js';
 import { E } from './store.js';
-import { openStory } from './stories.js';
 import { viewHash } from './url.js';
+import { hasText, openPage } from './page.js';
 import { esc } from './util.js';
 import { view } from './views.js';
 
 /* ---------- tooltip ---------- */
-function linkFor(k) {
+export function linkFor(k) {
   if (k.startsWith('e:')) return [`https://www.seismicportal.eu/eventdetails.html?unid=${encodeURIComponent(k.slice(2))}`, L.openE];
   if (k.startsWith('i:')) return [`https://www.isc.ac.uk/cgi-bin/web-db-run?event_id=${encodeURIComponent(k.slice(2))}&out_format=ISF2&request=COMPREHENSIVE`, L.openI];
   if (k.startsWith('u:')) return [`https://earthquake.usgs.gov/earthquakes/eventpage/${encodeURIComponent(k.slice(2))}`, L.openU];
   return ['https://www.ipma.pt/pt/geofisica/sismicidade/', L.openP];
 }
 /** A small locator map of the earthquake's region: land outlines and a dot. */
-function mapSVG(ev) {
+export function mapSVG(ev) {
   // frame the region's land (the remote Selvagens aside) together with the earthquake
   const shapes = LAND.filter(([r]) => r === ev.r).map(([, pts]) => pts);
   let x0 = ev.lon, x1 = ev.lon, y0 = ev.lat, y1 = ev.lat;
@@ -63,7 +62,7 @@ export function tipHTML(e, isPinned) {
     (ev.live ? `<div class="prelim">${L.prelim}</div>` : `<div class="src">${L.source} ${esc(src)}</div>`) +
     (isPinned ? mapSVG(ev) + `<div class="links"><a href="${link[0]}" target="_blank" rel="noopener">${link[1]} ↗</a>` +
       (/^\d{8}-/.test(ev.id) ? `<button class="copy" type="button">${L.copy}</button>` : '') +
-      (STORIES.some((st) => st.id === ev.id) ? `<button class="story" type="button" data-story="${STORIES.find((st) => st.id === ev.id).key}">${L.readStory}</button>` : '') + '</div>' : '');
+      (/^\d{8}-/.test(ev.id) ? `<button class="story" type="button" data-story="${ev.id}">${hasText(ev.id) ? L.readStory : L.details}</button>` : '') + '</div>' : '');
 }
 export let tipFor = -1, tipPinned = false, tipAt = null;
 export function showTip(e, isPinned, at) {
@@ -99,7 +98,7 @@ export function placeTip(vt) {
 tip.addEventListener('click', (ev) => {
   if (ev.target.closest('.close')) { unpin(); return; }
   const st = ev.target.closest('.story');
-  if (st) { openStory(st.dataset.story); return; }
+  if (st) { openPage(st.dataset.story); return; }
   const c = ev.target.closest('.copy');
   if (c && navigator.clipboard) {
     const url = new URL(location.href);

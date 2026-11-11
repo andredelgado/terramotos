@@ -153,7 +153,14 @@ main { flex: 1; min-height: 0; display: flex; gap: 12px; position: relative; bor
 .hbars b { font-weight: 500; text-align: right; }
 .hbars a { color: var(--fg); font-weight: 500; text-underline-offset: 3px; }
 .story-meta { color: var(--muted); font-size: 13px; margin: -4px 0 12px; }
-.story-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 14px; }
+.story-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 14px 0; }
+.story-links .copy { margin: 0; padding: 0; border: 0; background: none; cursor: pointer; font: inherit; font-weight: 500; color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+dialog h3 { margin: 16px 0 6px; font-size: 14px; font-weight: 600; }
+dialog blockquote { margin: 0 0 12px; padding-left: 12px; border-left: 2px solid var(--line); color: var(--muted); }
+dialog .facts { margin: 0 0 4px; }
+dialog .facts .where { font-weight: 500; }
+dialog .facts .meta { color: var(--muted); font-size: 13px; }
+dialog .map { max-width: 360px; margin-bottom: 4px; }
 .story-list { list-style: none; padding: 0; margin: 0 0 4px; }
 .story-list li { margin: 0; border-top: 1px solid var(--line); }
 .story-list button { display: block; width: 100%; padding: 10px 0; border: 0; background: none; text-align: left; cursor: pointer; font: inherit; color: var(--fg); }
