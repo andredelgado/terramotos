@@ -128,19 +128,21 @@ test('statistics count what the filters match, per period, and link back to the 
 test('stories open from the footer, a link and the card, in both languages', async ({ page, feed }) => {
   await page.goto('/');
   await expect(page.locator('#inview')).toContainText('in view');
-  await page.locator('#storiesBtn').click();
+  await page.locator('#catalogue summary').click();
+  const menu = page.locator('#catalogueStories a:visible');
+  await expect(menu).toHaveCount(4);
+  await menu.filter({ hasText: '28 February 1969' }).click();
   const story = page.locator('#story');
-  await expect(story.locator('.story-list button')).toHaveCount(4);
-  await story.locator('[data-story="19690228-c63c"]').click();
-  await expect(story.locator('h2')).toHaveText('28 February 1969');
+
+  await expect(story.locator('h2')).toHaveText('The earthquake of 28 February 1969');
   await expect(story.locator('.story-meta')).toContainText('M 7.8');
   await expect(story.locator('.page-text p')).toHaveCount(3);
   await expect(page).toHaveURL(/page=19690228-c63c/);
 
   await page.reload(); // a shared story link
-  await expect(story.locator('h2')).toHaveText('28 February 1969');
+  await expect(story.locator('h2')).toHaveText('The earthquake of 28 February 1969');
   await story.locator('.back').click();
-  await expect(story.locator('.story-list button')).toHaveCount(4);
+  await expect(story.locator('.story-list a')).toHaveCount(4);
   await story.locator('[data-story="19690228-c63c"]').click();
 
   await story.locator('a', { hasText: 'Open on the map' }).click();
@@ -152,7 +154,7 @@ test('stories open from the footer, a link and the card, in both languages', asy
 
   await page.locator('#lang').click();
   await page.locator('#tip .story').click();
-  await expect(story.locator('h2')).toHaveText('28 de fevereiro de 1969');
+  await expect(story.locator('h2')).toHaveText('Sismo de 28 de fevereiro de 1969');
   await page.keyboard.press('Escape');
   await expect(story).toBeHidden();
   await expect(page.locator('#tip')).toBeVisible(); // closing the story keeps the selection
@@ -168,8 +170,8 @@ test('every earthquake has a page with its details and the earthquakes around it
   await expect(dialog).toContainText('2 other earthquakes within 50 km');
 
   // the largest neighbour is first, and opens its own page with its story
-  await dialog.locator('.story-list button').first().click();
-  await expect(dialog.locator('h2')).toHaveText('28 February 1969');
+  await dialog.locator('.story-list a').first().click();
+  await expect(dialog.locator('h2')).toHaveText('The earthquake of 28 February 1969');
   await expect(page).toHaveURL(/page=19690228-c63c/);
   await page.keyboard.press('Escape');
   await expect(page).not.toHaveURL(/page=/);

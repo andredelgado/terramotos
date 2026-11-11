@@ -85,6 +85,7 @@ test('only the production app and a configured endpoint can send counts', () => 
     assert.equal(counter.enabled, false);
     assert.equal(calls.length, 0);
   }
+  assert.equal(browser({ url: 'https://terramotos.com/en/' }).counter.enabled, true);
   assert.equal(browser({ url: 'https://terramotos.com/index.html' }).counter.enabled, true);
 });
 

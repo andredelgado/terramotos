@@ -7,7 +7,7 @@ import { agencyName, fmtDate, fmtDec, fmtTime, L, lang, placeName, REGION } from
 import { S } from './state.js';
 import { CHUNKS, ensureYear, N } from './store.js';
 import { writeHash } from './url.js';
-import { esc, kmBetween, yearOf } from './util.js';
+import { assetURL, esc, eventHref, kmBetween, plainLinkClick, yearOf } from './util.js';
 
 const ID = /^\d{8}-\w+$/;
 const NEAR_KM = 50, NEAR_SECONDS = 7 * 86400, NEAR_SHOWN = 8;
@@ -17,10 +17,18 @@ export let pageOpen = null; // null: closed; '': the list of stories; otherwise 
 
 // the earthquakes that have a text of their own, written in content/quakes/ and built by tools/build_content.py
 const TEXTS = new Map(), BODIES = new Map();
-fetch('content/index.json')
+fetch(assetURL('content/index.json'))
   .then((r) => (r.ok ? r.json() : []))
   .then((list) => {
     for (const entry of list) TEXTS.set(entry.id, entry);
+    // The unbuilt static preview has no generated navigation.
+    const menu = $('#catalogueStories');
+    if (!menu.children.length) for (const entry of list) for (const code of ['en', 'pt']) {
+      const item = document.createElement('li'), link = document.createElement('a');
+      item.lang = code; link.href = eventHref(entry.id, code);
+      link.textContent = (entry[code] || entry.en || entry.pt).title;
+      item.append(link); menu.append(item);
+    }
     if (pageDlg.open) renderPage();
     if (S.META) buildJump();
     if (!tip.hidden && tipFor >= 0 && tipFor < N) tip.innerHTML = tipHTML(tipFor, tipPinned);
@@ -55,8 +63,8 @@ function nearbyHTML(ev) {
   if (!all.length) return `<h3>${L.nearTitle}</h3><p>${L.nearNone}</p>`;
   const shown = all.slice().sort((a, b) => (Number.isNaN(b.m) ? -1 : b.m) - (Number.isNaN(a.m) ? -1 : a.m) || a.t - b.t).slice(0, NEAR_SHOWN);
   return `<h3>${L.nearTitle}</h3><p>${L.near(all.length)}${all.length > shown.length ? ' ' + L.nearMore(shown.length) : ''}</p><ul class="story-list">` +
-    shown.map((x) => `<li><button type="button" data-story="${x.id}"><b>${magText(x)}</b> · ${fmtDate(x.t)} · ${fmtTime(x.t).slice(0, 5)} UTC` +
-      `<span>${esc(x.place ? placeName(x.place) : REGION[x.r])}</span></button></li>`).join('') + '</ul>';
+    shown.map((x) => `<li><a href="${eventHref(x.id, lang)}" data-story="${x.id}"><b>${magText(x)}</b> · ${fmtDate(x.t)} · ${fmtTime(x.t).slice(0, 5)} UTC` +
+      `<span>${esc(x.place ? placeName(x.place) : REGION[x.r])}</span></a></li>`).join('') + '</ul>';
 }
 function factsHTML(ev) {
   const coords = `${fmtDec(Math.abs(ev.lat), 2)}°${ev.lat >= 0 ? 'N' : 'S'} ${fmtDec(Math.abs(ev.lon), 2)}°${ev.lon >= 0 ? L.E : L.W}`;
@@ -74,7 +82,7 @@ export function renderPage() {
   const body = $('#storyBody');
   if (!pageOpen) {
     body.innerHTML = `<h2 id="storyTitle">${L.stories}</h2><p>${L.storiesIntro}</p><ul class="story-list">` +
-      [...TEXTS.keys()].map((id) => { const t = textOf(id); return `<li><button type="button" data-story="${id}"><b>${esc(t.title)}</b><span>${esc(t.summary)}</span></button></li>`; }).join('') + '</ul>';
+      [...TEXTS.keys()].map((id) => { const t = textOf(id); return `<li><a href="${eventHref(id, lang)}" data-story="${id}"><b>${esc(t.title)}</b><span>${esc(t.summary)}</span></a></li>`; }).join('') + '</ul>';
     return;
   }
   const id = pageOpen, ev = findEvent(id), text = textOf(id);
@@ -85,7 +93,7 @@ export function renderPage() {
   }
   if (text && !BODIES.has(text.file)) {
     BODIES.set(text.file, '');
-    fetch(text.file).then((r) => (r.ok ? r.text() : '')).then((html) => { BODIES.set(text.file, html); if (pageOpen === id) renderPage(); }, () => BODIES.delete(text.file));
+    fetch(assetURL(text.file)).then((r) => (r.ok ? r.text() : '')).then((html) => { BODIES.set(text.file, html); if (pageOpen === id) renderPage(); }, () => BODIES.delete(text.file));
   }
   const iso = (t) => new Date(t * 1000).toISOString();
   const link = linkFor(ev.k);
@@ -117,7 +125,10 @@ export function openPage(ref) {
 pageDlg.addEventListener('close', () => { pageOpen = null; writeHash(); });
 pageDlg.addEventListener('click', (ev) => {
   const pick = ev.target.closest('[data-story]'), copy = ev.target.closest('.copy');
-  if (pick) openPage(pick.dataset.story);
+  if (pick) {
+    if (!plainLinkClick(ev)) return;
+    ev.preventDefault(); openPage(pick.dataset.story);
+  }
   else if (ev.target.closest('.back')) openPage('');
   else if (copy) {
     const url = new URL(location.href);
@@ -128,4 +139,8 @@ pageDlg.addEventListener('click', (ev) => {
     navigator.clipboard?.writeText(url.href).then(() => { copy.textContent = L.copied; }, () => {});
   } else if (ev.target === pageDlg || ev.target.closest('.close') || ev.target.closest('a:not([target])')) pageDlg.close();
 });
-$('#storiesBtn').addEventListener('click', () => openPage(''));
+$('#catalogueStories').addEventListener('click', (e) => {
+  const link = e.target.closest('a');
+  if (!link || !plainLinkClick(e)) return;
+  e.preventDefault(); $('#catalogue').open = false; openPage(link.pathname.split('/').pop());
+});

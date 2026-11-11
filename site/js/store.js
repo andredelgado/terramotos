@@ -9,7 +9,7 @@ import { updateLatest } from './latest.js';
 import { captureListAnchor, restoreListAnchor } from './list.js';
 import { pinnedId, unpin } from './selection.js';
 import { S } from './state.js';
-import { hashId, kmBetween, lowerBound, yearOf } from './util.js';
+import { assetURL, hashId, kmBetween, lowerBound, yearOf } from './util.js';
 
 // data: META describes every year; CHUNKS holds the years loaded so far. Two feeds read straight
 // from the browser fill in what the stored catalogue does not have yet: IPMA (official, last
@@ -60,7 +60,7 @@ export function ensureYear(y) {
   if (CHUNKS.has(y)) return Promise.resolve();
   if (LOADING.has(y)) return LOADING.get(y);
   if (Date.now() - (FAILED.get(y) || 0) < 20000) return Promise.resolve();
-  const pr = fetch(`data/years/${y}.json?v=${S.META.years[y].v}`)
+  const pr = fetch(assetURL(`data/years/${y}.json?v=${S.META.years[y].v}`))
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((p) => { FAILED.delete(y); CHUNKS.set(y, { v: S.META.years[y].v, events: decodeYear(p) }); yearArrived(); })
     .catch(() => { FAILED.set(y, Date.now()); setTimeout(schedule, 20500); })
@@ -164,5 +164,6 @@ export function applyCounts() {
   }
   yearMax = Math.max(1, ...yearCounts);
   S.listDirty = true;
-  $('#count').textContent = fmtNum(total);
+  const count = $('#count'), label = fmtNum(total);
+  if (count.textContent !== label) count.textContent = label;
 }

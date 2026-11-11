@@ -14,7 +14,7 @@ import { setStatsPeriod, statsPeriod } from './stats.js';
 import { applyCounts, ensureYear, N } from './store.js';
 import { pageDlg, renderPage } from './page.js';
 import { readColors } from './theme.js';
-import { applyHash, countUsage, writeHash } from './url.js';
+import { applyHash, countUsage, viewHash, writeHash } from './url.js';
 import { pref, yearOf } from './util.js';
 import { scroller, setView, view } from './views.js';
 import './text.js';
@@ -49,9 +49,9 @@ new ResizeObserver(() => {
 }).observe(main);
 function applyLang() {
   document.documentElement.lang = lang;
-  document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = L[el.dataset.i18n]; });
+  document.querySelectorAll('[data-i18n]').forEach((el) => { const label = L[el.dataset.i18n]; if (el.textContent !== label) el.textContent = label; });
   document.querySelectorAll('[data-i18n-aria]').forEach((el) => { el.setAttribute('aria-label', L[el.dataset.i18nAria]); });
-  const lb = $('#lang'); lb.textContent = L.other; lb.setAttribute('aria-label', L.aLang);
+  const lb = $('#lang'); lb.textContent = L.other; lb.setAttribute('aria-label', L.other + ' · ' + L.aLang);
   document.querySelectorAll('#views button').forEach((b) => { b.title = b.getAttribute('aria-label'); });
   S.listDirty = true;
   $('#aboutBody').innerHTML = L.aboutHTML(S.META ? yearOf(S.FIRST) : 1909);
@@ -65,7 +65,21 @@ function applyLang() {
 const about = $('#about');
 $('#aboutBtn').addEventListener('click', () => about.showModal());
 about.addEventListener('click', (ev) => { if (ev.target === about || ev.target.closest('.close')) about.close(); });
-$('#lang').addEventListener('click', () => { setLang(lang === 'pt' ? 'en' : 'pt'); pref('seis.lang', lang); applyLang(); });
+const languageLink = $('#lang');
+function updateLanguageLink() {
+  languageLink.href = (lang === 'pt' ? '/en/' : '/') + location.search + (S.booted ? viewHash() : location.hash);
+}
+if (document.documentElement.hasAttribute('data-home')) {
+  updateLanguageLink();
+  languageLink.addEventListener('focus', updateLanguageLink);
+  languageLink.addEventListener('pointerdown', updateLanguageLink);
+  languageLink.addEventListener('click', updateLanguageLink);
+} else {
+  // The source-only preview has one HTML document.
+  languageLink.addEventListener('click', (event) => {
+    event.preventDefault(); setLang(lang === 'pt' ? 'en' : 'pt'); pref('seis.lang', lang); applyLang();
+  });
+}
 if (document.fonts) document.fonts.ready.then(schedule);
 
 readColors();

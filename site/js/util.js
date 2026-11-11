@@ -22,6 +22,9 @@ export function rng(seed) {
 export function hashId(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; }
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const yearOf = (t) => new Date(t * 1000).getUTCFullYear();
+export const assetURL = (path) => new URL('../' + path, import.meta.url);
+export const eventHref = (id, lang) => (lang === 'en' ? '/en' : '') + '/sismo/' + encodeURIComponent(id);
+export const plainLinkClick = (e) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
 export function kmBetween(a, b) {
   const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;

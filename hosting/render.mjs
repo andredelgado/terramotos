@@ -1,3 +1,4 @@
+import { SOURCES } from '../site/js/config.js';
 import { locatorSVG } from '../site/js/locator.js';
 import { agencyName, translatedPlace } from '../site/js/names.js';
 import { I18N } from '../site/js/text.js';
@@ -30,7 +31,7 @@ function documentHTML({ lang, title, description, canonical, alternate, body, im
 ${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" href="${esc(canonical)}"><link rel="alternate" hreflang="${lang}" href="${esc(canonical)}"><link rel="alternate" hreflang="${lang === 'pt' ? 'en' : 'pt'}" href="${esc(alternate)}">`}
 <meta property="og:type" content="article"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description)}"><meta property="og:url" content="${esc(canonical)}"><meta property="og:image" content="${esc(image)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" type="application/rss+xml" title="Terramotos Portugal" href="/rss.xml"><style>${CSS}</style><script>${THEME}</script></head><body>
-<header><a href="/">Terramotos Portugal</a><nav>${alternate ? `<a href="${esc(alternate)}" lang="${lang === 'pt' ? 'en' : 'pt'}">${L.other}</a>` : ''}<button id="theme" type="button" aria-label="${L.aTheme}">◐</button></nav></header>
+<header><a href="${lang === 'pt' ? '/' : '/en/'}">Terramotos Portugal</a><nav>${alternate ? `<a href="${esc(alternate)}" lang="${lang === 'pt' ? 'en' : 'pt'}">${L.other}</a>` : ''}<button id="theme" type="button" aria-label="${L.aTheme}">◐</button></nav></header>
 <main>${body}</main><footer>${lang === 'pt' ? 'Dados de' : 'Data from'} <a href="https://www.ipma.pt/pt/geofisica/sismicidade/">IPMA</a>, <a href="https://www.isc.ac.uk/iscbulletin/">ISC</a>, <a href="https://www.seismicportal.eu/">EMSC</a> ${lang === 'pt' ? 'e' : 'and'} <a href="https://earthquake.usgs.gov/">USGS</a>. ${L.utc}.</footer></body></html>`;
 }
 
@@ -41,10 +42,14 @@ export function renderEvent({ event: ev, nearby, story, storyHTML, lang, siteURL
   const date = (t) => FORMATS[lang].date.format(t * 1000);
   const time = (t) => new Date(t * 1000).toISOString().slice(11, 19);
   const place = translatedPlace(ev.place, lang) || region;
-  const title = story?.title || `${magnitude(ev)} · ${place}`;
-  const description = story?.summary || `${magnitude(ev)} · ${place} · ${date(ev.t)}, ${time(ev.t)} UTC. ${L.details} · IPMA, ISC, EMSC, USGS.`;
+  const label = lang === 'pt' ? 'Sismo' : 'Earthquake';
+  const when = `${date(ev.t)}, ${time(ev.t)} UTC`;
+  const sources = SOURCES.filter(([bit]) => ev.s & bit).map(([, name]) => name).join(' · ');
+  const name = [label + (ev.m == null ? '' : ' ' + magnitude(ev)), place, when].join(' · ');
+  const title = story?.title || name + (ev.sameTime ? ' · ' + ev.id.split('-')[1] : '');
+  const description = [story?.summary, name, ev.d == null ? null : L.deep(number(ev.d)),
+    sources && L.source + ' ' + sources].filter(Boolean).join('. ') + '.';
   const canonical = siteURL + eventPath(ev.id, lang), alternate = siteURL + eventPath(ev.id, lang === 'pt' ? 'en' : 'pt');
-  const sources = [[1, 'IPMA'], [2, 'ISC'], [4, 'EMSC'], [8, 'USGS']].filter(([bit]) => ev.s & bit).map(([, name]) => name).join(' · ');
   const source = sourceLink(ev.k || ''), iso = (t) => new Date(t * 1000).toISOString();
   const fact = [region, ev.d == null ? null : L.deep(number(ev.d)), `${number(ev.lat, 2)}°, ${number(ev.lon, 2)}°`].filter(Boolean).join(' · ');
   const nearbyHTML = nearby.events.map((e) => `<li><a href="${eventPath(e.id, lang)}"><b>${esc(magnitude(e))}</b> · ${esc(date(e.t))} · ${time(e.t).slice(0, 5)} UTC<span>${esc(translatedPlace(e.place, lang) || [L.r0, L.r1, L.r2][e.r])}</span></a></li>`).join('');
@@ -53,7 +58,7 @@ export function renderEvent({ event: ev, nearby, story, storyHTML, lang, siteURL
 ${storyHTML || ''}${locatorSVG(ev, L.aMap)}<div class="facts"><p>${esc(place)}</p><p>${esc(fact)}</p>
 ${ev.inten || ev.felt ? `<p>${esc(ev.inten ? L.feltI(ev.inten) : L.felt)}</p>` : ''}
 ${ev.m != null && ev.au ? `<p>${esc(L.magBy(agencyName(ev.au)))}</p>` : ''}<p>${L.source} ${esc(sources)}</p></div>
-<nav class="links"><a href="/#s=1d&q=${ev.id}">${L.onDrum}</a><a href="/#v=map&from=${iso(ev.t - 86400)}&to=${iso(ev.t + 30 * 86400)}&q=${ev.id}">${L.onMap}</a><a href="/#v=list&q=${ev.id}">${L.onList}</a><a href="${esc(source[0])}" rel="noopener">${esc(source[1])} ↗</a></nav>
+<nav class="links"><a href="${lang === 'pt' ? '/' : '/en/'}#s=1d&q=${ev.id}">${L.onDrum}</a><a href="${lang === 'pt' ? '/' : '/en/'}#v=map&from=${iso(ev.t - 86400)}&to=${iso(ev.t + 30 * 86400)}&q=${ev.id}">${L.onMap}</a><a href="${lang === 'pt' ? '/' : '/en/'}#v=list&q=${ev.id}">${L.onList}</a><a href="${lang === 'pt' ? '/arquivo/' : '/en/archive/'}${iso(ev.t).slice(0, 4)}/">${lang === 'pt' ? 'Arquivo' : 'Archive'} · ${iso(ev.t).slice(0, 4)}</a><a href="${esc(source[0])}" rel="noopener">${esc(source[1])} ↗</a></nav>
 <h2>${L.nearTitle}</h2><p>${nearby.count ? esc(L.near(nearby.count)) + (nearby.count > nearby.events.length ? ' ' + esc(L.nearMore(nearby.events.length)) : '') : L.nearNone}</p>${nearbyHTML ? `<ul class="nearby">${nearbyHTML}</ul>` : ''}`;
   return documentHTML({ lang, title, description, canonical, alternate, body, image: canonical + '.png' });
 }
@@ -61,5 +66,5 @@ ${ev.m != null && ev.au ? `<p>${esc(L.magBy(agencyName(ev.au)))}</p>` : ''}<p>${
 export function renderError(lang, status) {
   const title = status === 404 ? I18N[lang].pageMissing : lang === 'pt' ? 'Não foi possível carregar o sismo.' : 'Could not load this earthquake.';
   return documentHTML({ lang, title, description: title, canonical: '', alternate: '', noindex: true,
-    body: `<h1>${esc(title)}</h1><p><a href="/">${lang === 'pt' ? 'Voltar ao sismógrafo' : 'Back to the seismograph'}</a></p>` });
+    body: `<h1>${esc(title)}</h1><p><a href="${lang === 'pt' ? '/' : '/en/'}">${lang === 'pt' ? 'Voltar ao sismógrafo' : 'Back to the seismograph'}</a></p>` });
 }

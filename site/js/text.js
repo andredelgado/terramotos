@@ -2,7 +2,7 @@
         // same earthquake: this close in time and place
 export const I18N = {
   en: {
-    loc: 'en-GB', other: 'PT', aLang: 'Mudar para português',
+    loc: 'en-GB', homeHeading: 'Earthquakes in Portugal', other: 'PT', aLang: 'Mudar para português',
     months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     r0: 'Mainland', r1: 'Azores', r2: 'Madeira', unit: ' earthquakes',
     s1d: 'Day', s1w: 'Week', s1mo: 'Month', s1y: 'Year', mag: 'Magnitude', region: 'Region', regionShort: 'Area',
@@ -10,7 +10,7 @@ export const I18N = {
     first: 'First earthquake on record', data: 'Data:', utc: 'Times in UTC',
     aSpans: 'Time per line', aMag: 'Minimum magnitude', aJump: 'Jump to', aTheme: 'Switch between light and dark',
     aDrum: 'Seismograph drum. Each line is a slice of time, newest on top; the waves are earthquakes. Scroll down to go back in time; left and right arrows step between earthquakes.',
-    about: 'About',
+    about: 'About', browse: 'Browse catalogue',
     aboutHTML: (y) => `<h2 id="aboutTitle">Terramotos Portugal</h2>
       <p>Every earthquake recorded in mainland Portugal, the Azores and Madeira since ${y}, drawn as a seismograph drum.</p>
       <ul>
@@ -63,7 +63,7 @@ export const I18N = {
     openE: 'Open on EMSC', openI: 'Open in the ISC Bulletin', openU: 'Open on USGS', openP: 'Open IPMA seismicity',
   },
   pt: {
-    loc: 'pt-PT', other: 'EN', aLang: 'Switch to English',
+    loc: 'pt-PT', homeHeading: 'Sismos em Portugal', other: 'EN', aLang: 'Switch to English',
     months: ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
     r0: 'Continente', r1: 'Açores', r2: 'Madeira', unit: ' sismos',
     s1d: 'Dia', s1w: 'Semana', s1mo: 'Mês', s1y: 'Ano', mag: 'Magnitude', region: 'Região', regionShort: 'Zona',
@@ -71,7 +71,7 @@ export const I18N = {
     first: 'Primeiro sismo registado', data: 'Dados:', utc: 'Horas em UTC',
     aSpans: 'Tempo por linha', aMag: 'Magnitude mínima', aJump: 'Ir para', aTheme: 'Alternar entre claro e escuro',
     aDrum: 'Tambor de sismógrafo. Cada linha é um intervalo de tempo, a mais recente em cima; as ondas são sismos. Desça para recuar no tempo; as setas esquerda e direita saltam entre sismos.',
-    about: 'Sobre',
+    about: 'Sobre', browse: 'Consultar catálogo',
     aboutHTML: (y) => `<h2 id="aboutTitle">Terramotos Portugal</h2>
       <p>Todos os sismos registados em Portugal continental, nos Açores e na Madeira desde ${y}, desenhados como num tambor de sismógrafo.</p>
       <ul>

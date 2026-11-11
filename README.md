@@ -35,8 +35,12 @@ busiest days. Bars and days open on the seismograph. Energy is an estimate, log 
 details, a locator map, the other earthquakes within 50 km in the week before and after, and links
 that open the seismograph, the map and the list at that earthquake. It opens from the card
 ("Details"). An earthquake with a text of its own is a **story**: the text is a Markdown file in
-`content/quakes/`, one per language, and those earthquakes are listed under Stories in the footer
-and the Jump menu. See [content/README.md](content/README.md) for the format.
+`content/quakes/`, one per language, and those earthquakes are listed in the Jump menu.
+On the published homepage, **Browse catalogue** links to the six most recent
+catalogued earthquakes, the stories, and the [archive by year](https://terramotos.com/en/archive/)
+([Português](https://terramotos.com/arquivo/)). The archive lists every event in UTC order, 100
+per page; a list of date ranges on the first page of each year links directly to its other pages.
+These links work without JavaScript. See [content/README.md](content/README.md) for the story format.
 
 That geography is `site/map.json` (25 KB), fetched the first time the map is opened, and
 `site/faults.json` (22 KB), fetched only when the faults are switched on. Both are built by
@@ -234,16 +238,18 @@ npm run dev:hosting
 ```
 
 `tools/build_site.py` writes `dist/cloudflare/`: the static app with versioned modules, prepared
-earthquake data, the RSS feed and split Portuguese/English sitemaps. Nearby earthquakes are
-calculated during the build, so a page request makes one asset lookup instead of searching the
+earthquake data, the RSS feed and split sitemaps. The build renders Portuguese at `/` and English
+at `/en/`, with links to the year archive, three regional pages, and the dataset methodology in each
+language. Nearby earthquakes are calculated during the build, so a page request makes one asset lookup instead of searching the
 catalogue. Data is grouped into eight files per month to stay within the Workers Free asset count
 and file-size limits. The Worker is checked with `npm run test:hosting`; `npm run deploy` builds
 and publishes through the pinned Wrangler version.
 
 The hourly/daily/monthly update job publishes to Cloudflare. It uses encrypted repository secret
 `CLOUDFLARE_API_TOKEN`, scoped to **Individual Workers Editor** on **terramotos-portugal** only.
-The account id is public and is
-set in `wrangler.jsonc`. Domain connections are configured once in Cloudflare; routine deployments
+The public account id is set in `wrangler.jsonc`. All requests reach the Worker first so both
+alternate hostnames can redirect static files as well as event pages.
+Domain connections are configured once in Cloudflare; routine deployments
 do not alter DNS or require DNS permissions. Renew the deployment token before its expiry.
 
 Each run checks out the `data` branch, rebuilds the database, fetches new records, commits what

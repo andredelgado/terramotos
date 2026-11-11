@@ -6,7 +6,7 @@ export { agencyName } from './names.js';
 
 export const placeName = (p) => translatedPlace(p, lang);
 
-export let lang = pref('seis.lang');
+export let lang = document.documentElement.hasAttribute('data-home') ? document.documentElement.lang : pref('seis.lang');
 if (lang !== 'pt' && lang !== 'en') lang = /^pt/i.test(navigator.language || '') ? 'pt' : 'en';
 export let L = I18N[lang], MON = L.months, REGION = [L.r0, L.r1, L.r2];
 export const fmtNum = (n) => n.toLocaleString(L.loc);

@@ -1,0 +1,11 @@
+:root { color-scheme: light dark; font: 16px/1.5 system-ui, sans-serif; }
+body { max-width: 48rem; margin: 0 auto; padding: 1.25rem; }
+header, nav { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; padding-block: .75rem; }
+header { justify-content: space-between; border-bottom: 1px solid GrayText; }
+h1 { line-height: 1.2; margin: 2rem 0 .5rem; }
+a { color: inherit; text-underline-offset: .2em; }
+summary { cursor: pointer; }
+ul { list-style: none; padding: 0; }
+li a { display: block; padding-block: .35rem; }
+.years { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .25rem 1rem; }
+.events li { border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent); }

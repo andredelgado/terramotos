@@ -22,7 +22,7 @@ on:
         default: live
   push:
     branches: [main]
-    paths: ["site/**", "content/**", "hosting/**", "tools/build_content.py", "tools/build_site.py", "wrangler.jsonc", "package*.json", "quake/**", "update.py", ".github/workflows/update.yml"]
+    paths: ["site/**", "content/**", "hosting/**", "tools/build_content.py", "tools/build_site.py", "tools/site_archive.py", "tools/render_home.mjs", "wrangler.jsonc", "package*.json", "quake/**", "update.py", ".github/workflows/update.yml"]
 
 permissions:
   contents: write  # to commit to the data branch
@@ -44,6 +44,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
 
       - name: Check the feed exporter
         run: python3 -m unittest discover -s tests -p 'test_*.py'
@@ -106,11 +111,6 @@ jobs:
 
       - name: Build the earthquake pages' text
         run: python3 tools/build_content.py
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24"
-          cache: npm
 
       - name: Install the pinned deployment tools
         run: npm ci
