@@ -43,7 +43,7 @@ details, a locator map, the other earthquakes within 50 km in the week before an
 that open the seismograph, the map and the list at that earthquake. It opens from the card
 ("Details"). An earthquake with a text of its own is a **story**: the text is a Markdown file in
 `content/quakes/`, one per language, and those earthquakes are listed in the Jump menu.
-On the published homepage, **Browse catalogue** links to the six most recent
+On the published homepage, **Archive** links to the six most recent
 catalogued earthquakes, the stories, and the [archive by year](https://terramotos.com/en/archive/)
 ([Português](https://terramotos.com/arquivo/)). The archive lists every event in UTC order, 100
 per page; a list of date ranges on the first page of each year links directly to its other pages.

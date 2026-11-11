@@ -139,6 +139,9 @@ pageDlg.addEventListener('click', (ev) => {
     navigator.clipboard?.writeText(url.href).then(() => { copy.textContent = L.copied; }, () => {});
   } else if (ev.target === pageDlg || ev.target.closest('.close') || ev.target.closest('a:not([target])')) pageDlg.close();
 });
+// the archive menu closes like any other menu: on a click outside it, or Escape
+document.addEventListener('click', (e) => { const menu = $('#catalogue'); if (menu.open && !menu.contains(e.target)) menu.open = false; });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('#catalogue').open = false; });
 $('#catalogueStories').addEventListener('click', (e) => {
   const link = e.target.closest('a');
   if (!link || !plainLinkClick(e)) return;

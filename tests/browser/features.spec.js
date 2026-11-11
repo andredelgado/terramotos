@@ -179,6 +179,7 @@ test('every earthquake has a page with its details and the earthquakes around it
   // the card of any earthquake leads to its page
   await page.goto('/#v=list&q=19690228-2222');
   await expect(page.locator('#tip .story')).toHaveText('Details');
+  await expect(page.locator('#tip .story')).toHaveAttribute('href', '/en/sismo/19690228-2222'); // the permanent page
   await page.locator('#tip .story').click();
   await expect(dialog.locator('h2')).toHaveText('Later earthquake');
 });

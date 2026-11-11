@@ -4,12 +4,17 @@
   "account_id": "3ee7b582064d65b12fac32e107134f15",
   "main": "hosting/worker.mjs",
   "compatibility_date": "2026-11-11",
-  "workers_dev": true,
+  // the site has one address; a second one on workers.dev would only be a duplicate
+  "workers_dev": false,
   "preview_urls": false,
   "assets": {
     "directory": "dist/cloudflare",
     "binding": "ASSETS",
-    "run_worker_first": true
+    // Only earthquake pages and their images need the Worker. Everything else is a static file,
+    // which Cloudflare serves without counting it against the Worker's daily request limit; if
+    // that limit is ever reached, the app, the archive and the data keep working.
+    "run_worker_first": ["/sismo/*", "/en/sismo/*"],
+    "not_found_handling": "404-page"
   },
   "observability": {
     "enabled": true,

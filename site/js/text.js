@@ -10,7 +10,7 @@ export const I18N = {
     first: 'First earthquake on record', data: 'Data:', utc: 'Times in UTC',
     aSpans: 'Time per line', aMag: 'Minimum magnitude', aJump: 'Jump to', aTheme: 'Switch between light and dark',
     aDrum: 'Seismograph drum. Each line is a slice of time, newest on top; the waves are earthquakes. Scroll down to go back in time; left and right arrows step between earthquakes.',
-    about: 'About', browse: 'Browse catalogue',
+    about: 'About', browse: 'Archive',
     aboutHTML: (y) => `<h2 id="aboutTitle">Terramotos Portugal</h2>
       <p>Every earthquake recorded in mainland Portugal, the Azores and Madeira since ${y}, drawn as a seismograph drum.</p>
       <ul>
@@ -24,6 +24,7 @@ export const I18N = {
       </ul>
       <p class="fine">Data from IPMA, the ISC Bulletin, EMSC and USGS. New earthquakes arrive live from EMSC and are preliminary until the catalogues confirm them. Map outlines from Natural Earth; plate boundaries from Bird (2003), as converted by Hugo Ahlenius, Nordpil; active faults from the GEM Global Active Faults Database (CC BY-SA 4.0); volcanoes from the Smithsonian Global Volcanism Program; town locations from GeoNames (CC BY 4.0).</p>
       <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Download the data</a> (CSV, free for non-commercial use with credit to the sources)</p>
+      <p class="fine">Found a mistake, or have a suggestion? <a href="https://github.com/andredelgado/terramotos/issues" target="_blank" rel="noopener">Tell us on GitHub</a>, where the code is also public.</p>
       <p class="fine" data-usage hidden>Cookieless usage counts by <a href="https://www.goatcounter.com/help/privacy" target="_blank" rel="noopener noreferrer">GoatCounter</a>. Respects Do Not Track and Global Privacy Control.</p>`,
     aView: 'View', vDrum: 'Seismograph', vList: 'List', vMap: 'Map', cTime: 'Time (UTC)', cPlace: 'Place', cDepth: 'Depth',
     lSizes: 'Magnitude 2, 4 and 6', lPlate: 'Plate boundaries', lFaults: 'Active faults', lVolc: 'Volcanoes', aLayers: 'Map layers',
@@ -76,7 +77,7 @@ export const I18N = {
     first: 'Primeiro sismo registado', data: 'Dados:', utc: 'Horas em UTC',
     aSpans: 'Tempo por linha', aMag: 'Magnitude mínima', aJump: 'Ir para', aTheme: 'Alternar entre claro e escuro',
     aDrum: 'Tambor de sismógrafo. Cada linha é um intervalo de tempo, a mais recente em cima; as ondas são sismos. Desça para recuar no tempo; as setas esquerda e direita saltam entre sismos.',
-    about: 'Sobre', browse: 'Consultar catálogo',
+    about: 'Sobre', browse: 'Arquivo',
     aboutHTML: (y) => `<h2 id="aboutTitle">Terramotos Portugal</h2>
       <p>Todos os sismos registados em Portugal continental, nos Açores e na Madeira desde ${y}, desenhados como num tambor de sismógrafo.</p>
       <ul>
@@ -90,6 +91,7 @@ export const I18N = {
       </ul>
       <p class="fine">Dados do IPMA, do boletim do ISC, do EMSC e do USGS. Os sismos novos chegam em direto do EMSC e são preliminares até os catálogos os confirmarem. Contornos do mapa: Natural Earth; limites de placas: Bird (2003), conversão de Hugo Ahlenius, Nordpil; falhas ativas: GEM Global Active Faults Database (CC BY-SA 4.0); vulcões: Smithsonian Global Volcanism Program; localidades: GeoNames (CC BY 4.0).</p>
       <p class="fine get"><a href="https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip">Descarregar os dados</a> (CSV, uso não comercial livre, com referência às fontes)</p>
+      <p class="fine">Encontrou um erro ou tem uma sugestão? <a href="https://github.com/andredelgado/terramotos/issues" target="_blank" rel="noopener">Diga-nos no GitHub</a>, onde o código também é público.</p>
       <p class="fine" data-usage hidden>Contagens de utilização sem cookies pelo <a href="https://www.goatcounter.com/help/privacy" target="_blank" rel="noopener noreferrer">GoatCounter</a>. Respeita Do Not Track e Global Privacy Control.</p>`,
     aView: 'Vista', vDrum: 'Sismógrafo', vList: 'Lista', vMap: 'Mapa', cTime: 'Hora (UTC)', cPlace: 'Local', cDepth: 'Profundidade',
     lSizes: 'Magnitude 2, 4 e 6', lPlate: 'Limites de placas', lFaults: 'Falhas ativas', lVolc: 'Vulcões', aLayers: 'Camadas do mapa',

@@ -1,11 +1,33 @@
 """Static entry points to the earthquake catalogue. All navigation works without JavaScript."""
 import datetime as dt
 import json
+import subprocess
 from collections import defaultdict
 from html import escape
+from pathlib import Path
 
 PAGE_SIZE = 100
 LANGS = ("en", "pt")
+MONTHS = {"pt": "janeiro fevereiro março abril maio junho julho agosto setembro outubro novembro dezembro".split(),
+          "en": "January February March April May June July August September October November December".split()}
+# The page (head, header, styles, credits) and the Portuguese place names come from the same code
+# as the earthquake pages, so that these pages look and read like the rest of the site.
+CHROME = {"shell": None, "places": {}}
+
+
+def prepare(events):
+    """Fetch the shared page and the translations of these events' places; one call per build."""
+    places = sorted({e["place"] for e in events if e["place"]})
+    if CHROME["shell"] and all(p in CHROME["seen"] for p in places):
+        return
+    done = subprocess.run(["node", str(Path(__file__).resolve().parent / "render_chrome.mjs")],
+                          input=json.dumps({"places": places}), stdout=subprocess.PIPE, text=True, check=True)
+    CHROME.update(json.loads(done.stdout), seen=set(places))
+
+
+def number(lang, n):
+    """A count with the language's thousands separator: 1 742 in Portuguese, 1,742 in English."""
+    return f"{n:,}".replace(",", "\u00a0" if lang == "pt" else ",")
 
 
 def archive_path(lang, year=None, page=1):
@@ -22,15 +44,20 @@ def stamp(event):
 
 
 def event_label(lang, event):
-    date = stamp(event).strftime("%Y-%m-%d %H:%M:%S UTC")
+    """One row, written like the nearby earthquakes on an earthquake's page."""
+    when = stamp(event)
+    month = MONTHS[lang][when.month - 1]
+    date = f"{when.day} de {month} de {when.year}" if lang == "pt" else f"{when.day} {month} {when.year}"
     place = event["place"] or (("Continente", "Açores", "Madeira") if lang == "pt"
                                else ("Mainland", "Azores", "Madeira"))[event["r"]]
+    if lang == "pt":
+        place = CHROME["places"].get(place, place)
     mag = "Sem magnitude" if lang == "pt" else "No magnitude"
     if event["m"] is not None:
         mag = f'M {event["m"]:.1f}'
         if lang == "pt":
             mag = mag.replace(".", ",")
-    return f'{date} · {mag} · {escape(place)}'
+    return f'<b>{mag}</b> · {date} · {when:%H:%M} UTC<span>{escape(place)}</span>'
 
 
 def event_list(lang, events):
@@ -55,27 +82,26 @@ def method_path(lang):
     return "/metodologia/" if lang == "pt" else "/en/methodology/"
 
 
-def browse_links(lang):
+def browse_links(lang, archive=True):
     pt = lang == "pt"
-    links = [(archive_path(lang), "Arquivo por ano" if pt else "Browse by year"),
+    links = [*([(archive_path(lang), "Arquivo por ano" if pt else "Browse by year")] if archive else []),
              *[(path, label) for label, _, path in REGIONS[lang]],
              (method_path(lang), "Dados e metodologia" if pt else "Data and methodology")]
     return '<nav>' + "".join(f'<a href="{path}">{label}</a>' for path, label in links) + '</nav>'
 
 
-def write_page(destination, origin, lang, path, alternate, title, description, body, schema=None):
-    pt = lang == "pt"
-    other = "en" if pt else "pt"
+def write_page(destination, origin, lang, path, alternate, title, description, body, schema=None, heading=None, kicker=""):
+    """Write one page. heading is the visible title when it differs from the document's; kicker is the small line above it."""
+    if not CHROME["shell"]:
+        prepare([])
     markup = ('<script type="application/ld+json">' + json.dumps(schema, ensure_ascii=False).replace("<", r"\u003c")
               + '</script>') if schema else ""
-    html = f"""<!doctype html>
-<html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{escape(title)} · Terramotos Portugal</title><meta name="description" content="{escape(description)}">
-<link rel="canonical" href="{origin}{path}"><link rel="alternate" hreflang="{lang}" href="{origin}{path}">
-<link rel="alternate" hreflang="{other}" href="{origin}{alternate}">{markup}
-<link rel="icon" href="/favicon.svg"><link rel="stylesheet" href="/archive.css"></head><body>
-<header><a href="{home_path(lang)}">Terramotos Portugal</a><a href="{alternate}" lang="{other}" hreflang="{other}">{"English" if pt else "Português"}</a></header>
-<main><h1>{escape(title)}</h1><p>{escape(description)}</p>{body}</main></body></html>"""
+    content = ((f'<p class="meta">{kicker}</p>' if kicker else "") + f'<h1>{escape(heading or title)}</h1>'
+               f'<p class="lede">{escape(description)}</p>{body}')
+    html = CHROME["shell"][lang]
+    for name, value in (("TITLE", escape(title)), ("DESCRIPTION", escape(description)), ("CANONICAL", origin + path),
+                        ("ALTERNATE", origin + alternate), ("HEAD", markup), ("BODY", content)):
+        html = html.replace(f"@@{name}@@", value)
     file = destination / path.strip("/") / "index.html"
     file.parent.mkdir(parents=True, exist_ok=True)
     file.write_text(html, encoding="utf-8")
@@ -86,10 +112,11 @@ def story_list(lang, stories):
         return ""
     rows = "".join(f'<li><a href="{event_path(lang, item["id"])}">'
                    f'{escape((item.get(lang) or item.get("pt") or item["en"])["title"])}</a></li>' for item in stories)
-    return '<h2>' + ("Sismos históricos" if lang == "pt" else "Historical earthquakes") + '</h2><ul>' + rows + '</ul>'
+    return '<h2>' + ("Sismos históricos" if lang == "pt" else "Historical earthquakes") + '</h2><ul class="plain">' + rows + '</ul>'
 
 
 def write_archive(destination, events, stories, origin):
+    prepare(events)
     years = defaultdict(list)
     for event in reversed(events):
         years[stamp(event).year].append(event)
@@ -103,16 +130,22 @@ def write_archive(destination, events, stories, origin):
         def write(year, page, title, description, body):
             path = archive_path(lang, year, page)
             alternate = archive_path(other, year, page)
-            write_page(destination, origin, lang, path, alternate, title, description, body)
+            # the page number stays in the document title, which must be unique, and moves out of the heading
+            heading, _, part = title.partition(" · ")
+            kicker = ""
+            if year:
+                kicker = f'<a href="{archive_path(lang)}">{name}</a>' + (f' · {part.replace("/", " de " if pt else " of ")}' if part else "")
+            write_page(destination, origin, lang, path, alternate, title, description, body, heading=heading, kicker=kicker)
             paths.append(path)
 
         def count(n):
             return f'{n} ' + (("sismo" if pt else "earthquake") if n == 1 else ("sismos" if pt else "earthquakes"))
 
-        rows = (f'<li><a href="{archive_path(lang, y)}">{y} <small>({count(len(group))})</small></a></li>'
+        rows = (f'<li><a href="{archive_path(lang, y)}"><span>{y}</span><small>{number(lang, len(group))}</small></a></li>'
                 for y, group in years.items())
         write(None, 1, name, "Escolha um ano para consultar os sismos registados em Portugal."
-              if pt else "Choose a year to browse recorded earthquakes in Portugal.", story_list(lang, stories) + '<ul class="years">' + "".join(rows) + '</ul>')
+              if pt else "Choose a year to browse recorded earthquakes in Portugal.", story_list(lang, stories) + '<h2>' + ("Por ano" if pt else "By year") + '</h2><ul class="years">' + "".join(rows) + '</ul>'
+              + '<h2>' + ("Por região" if pt else "By region") + '</h2>' + browse_links(lang, archive=False))
         for year, group in years.items():
             pages = (len(group) + PAGE_SIZE - 1) // PAGE_SIZE
             for i in range(pages):
@@ -144,6 +177,7 @@ def write_archive(destination, events, stories, origin):
 
 
 def write_landings(destination, events, generated, origin):
+    prepare(events)
     paths = []
     snapshot = dt.datetime.fromisoformat(generated.replace("Z", "+00:00")) if generated else stamp(events[-1])
     today = snapshot.date()

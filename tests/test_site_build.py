@@ -79,6 +79,12 @@ class SiteBuildTests(unittest.TestCase):
             page = ET.parse(self.output / f"sitemap-{language}-1.xml")
             self.assertEqual(page.findtext("s:url/s:loc", namespaces=namespace), f"https://terramotos.com{prefix}/sismo/20200101-abcd")
         self.assertIn("Sitemap: https://terramotos.com/sitemap.xml", (self.output / "robots.txt").read_text(encoding="utf-8"))
+        # an unknown address gets a real page in its language, kept out of search results
+        for folder, words in (("", "Página não encontrada"), ("en", "Page not found")):
+            missing = (self.output / folder / "404.html").read_text(encoding="utf-8")
+            self.assertIn(f"<h1>{words}</h1>", missing)
+            self.assertIn('name="robots" content="noindex"', missing)
+        self.assertIn("Strict-Transport-Security: max-age=31536000", (self.output / "_headers").read_text(encoding="utf-8"))
         record = json.loads((self.output / "pages/202001-5.json").read_text(encoding="utf-8"))["20200101-abcd"]
         self.assertEqual(record["event"]["m"], 2.3)
         self.assertEqual(record["nearby"], {"count": 0, "events": []})
@@ -115,6 +121,13 @@ class SiteBuildTests(unittest.TestCase):
             event_links = [u for f in (first, second) for u in Anchors(f).hrefs if u.startswith(event)]
             self.assertEqual(set(event_links), {event + i for i in ids})
             self.assertIn("A &amp; &lt;B&gt;", first.read_text())
+            # these pages share the earthquake pages' header, theme switch and styles, and write rows the same way
+            page_html = first.read_text()
+            self.assertIn('<button id="theme"', page_html)
+            self.assertNotIn("archive.css", page_html)
+            self.assertNotIn("@@", page_html)
+            self.assertIn("<h1>Earthquakes in 2020</h1>" if prefix else "<h1>Sismos em 2020</h1>", page_html)
+            self.assertIn("<b>M 2.3</b> · 1 January 2020 · 00:01 UTC" if prefix else "<b>M 2,3</b> · 1 de janeiro de 2020 · 00:01 UTC", page_html)
             self.assertTrue(all(build_site.SITE_URL + u in sitemap for u in (root, year, year + "2/")))
 
     def test_a_changed_import_gets_a_new_module_directory(self):
