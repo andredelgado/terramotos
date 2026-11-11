@@ -220,6 +220,11 @@ app and renders one complete HTML page for each earthquake at `/sismo/<id>` (Por
 `/en/sismo/<id>` (English). These addresses keep the permanent catalogue id even if a magnitude
 or place name is revised. The pages share the app's locator map, place translations and Markdown
 story text. They include canonical and language-alternate links and per-earthquake preview text.
+Each page also has its own preview image for link previews, at the page's address plus `.png`
+(magnitude, place, date and a locator map, in the page's language). The Worker draws it on
+request in `hosting/preview.mjs`, with no image library, and Cloudflare keeps it for a day. The
+letter shapes come from `hosting/font.mjs`, generated from the Inter font by
+`node tools/build_font.mjs`; rerun that only to change the sizes or the characters.
 
 ```bash
 npm ci
