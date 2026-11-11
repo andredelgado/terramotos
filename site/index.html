@@ -39,6 +39,7 @@ try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === '
 <link rel="modulepreload" href="js/map/panels.js">
 <link rel="modulepreload" href="js/map/period.js">
 <link rel="modulepreload" href="js/map/play.js">
+<link rel="modulepreload" href="js/near.js">
 <link rel="modulepreload" href="js/page.js">
 <link rel="modulepreload" href="js/rail.js">
 <link rel="modulepreload" href="js/selection.js">
@@ -96,6 +97,9 @@ try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === '
       <option value="1" data-i18n="r1">Azores</option>
       <option value="2" data-i18n="r2">Madeira</option>
     </select>
+    <button class="icon" id="nearBtn" type="button" aria-pressed="false" aria-label="Near a place" data-i18n-aria="plTitle">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14.5s4.5-4.2 4.5-8a4.5 4.5 0 0 0-9 0c0 3.8 4.5 8 4.5 8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="8" cy="6.5" r="1.6" fill="currentColor"/></svg>
+    </button>
     <select id="jump" aria-label="Jump to" data-i18n-aria="aJump">
       <option value="" data-i18n="jump">Jump to…</option>
     </select>
@@ -108,7 +112,7 @@ try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === '
 
 <div class="status">
   <span id="latest"><!-- latest-event --></span>
-  <span class="right"><span id="range"></span><span id="freshness" aria-live="polite"></span><span id="inview"></span></span>
+  <span class="right"><button id="nearChip" type="button" hidden></button><span id="range"></span><span id="freshness" aria-live="polite"></span><span id="inview"></span></span>
 </div>
 
 <main>
@@ -184,6 +188,23 @@ try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === '
 <dialog id="about" aria-labelledby="aboutTitle">
   <button class="close" type="button" aria-label="Close" data-i18n-aria="close">×</button>
   <div id="aboutBody"></div>
+</dialog>
+
+<dialog id="near" aria-labelledby="nearTitle">
+  <button class="close" type="button" aria-label="Close" data-i18n-aria="close">×</button>
+  <h2 id="nearTitle" data-i18n="plTitle">Near a place</h2>
+  <p data-i18n="plIntro">Show only the earthquakes within a distance of a town.</p>
+  <input type="search" id="nearSearch" autocomplete="off" aria-label="Town or city" data-i18n-aria="plSearch">
+  <ul class="story-list" id="nearList"></ul>
+  <div class="seg" id="nearRadius" role="group" aria-label="Distance" data-i18n-aria="plRadius">
+    <button type="button" data-km="25" aria-pressed="false">25 km</button>
+    <button type="button" data-km="50" aria-pressed="true">50 km</button>
+    <button type="button" data-km="100" aria-pressed="false">100 km</button>
+    <button type="button" data-km="200" aria-pressed="false">200 km</button>
+  </div>
+  <p class="story-links"><button class="copy" id="nearMe" type="button" data-i18n="plMe">Use my location</button><button class="copy" id="nearClear" type="button" data-i18n="plClear" hidden>Show everywhere</button></p>
+  <p class="fine" id="nearNote" aria-live="polite"></p>
+  <p class="fine" data-i18n="plPrivacy">Your location is only used in this browser, to find the nearest town.</p>
 </dialog>
 
 <dialog id="story" aria-labelledby="storyTitle">

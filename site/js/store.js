@@ -124,6 +124,7 @@ export function rebuild() {
   S.pinned = pinnedId ? E.findIndex((ev) => ev.id === pinnedId) : -1;
   if (pinnedId && S.pinned < 0 && !LOADING.size) unpin();
   applyMask();
+  if (S.near) applyCounts();
   if (S.pinned >= 0) showTip(S.pinned, true);
   restoreListAnchor(anchor);
   finishJump();
@@ -132,9 +133,11 @@ export function rebuild() {
 export function applyMask() {
   const mm = S.minMag === 'all' ? null : Number(S.minMag);
   const rg = S.region === 'all' ? null : Number(S.region);
+  const near = S.near, reach = S.nearKm / 111; // a degree of latitude is about 111 km: a quick first test
   mask = new Uint8Array(N); cum = new Int32Array(N + 1);
   for (let e = 0; e < N; e++) {
-    const ok = (rg === null || REG[e] === rg) && (mm === null || (!Number.isNaN(MAG[e]) && MAG[e] >= mm));
+    const ok = (rg === null || REG[e] === rg) && (mm === null || (!Number.isNaN(MAG[e]) && MAG[e] >= mm)) &&
+      (!near || (Math.abs(E[e].lat - near.lat) <= reach && kmBetween(near, E[e]) <= S.nearKm));
     mask[e] = ok ? 1 : 0;
     cum[e + 1] = cum[e] + mask[e];
   }
@@ -161,6 +164,17 @@ export function applyCounts() {
     });
     if (Number(y) - firstYear < yearCounts.length) yearCounts[Number(y) - firstYear] = n;
     total += n;
+  }
+  if (S.near) {
+    // distances are only known for the years in memory, so all of them are fetched; until a year
+    // arrives its count stays the estimate above, which is what makes the views ask for it
+    ensureYears(Object.keys(S.META.years).map(Number));
+    total = 0;
+    for (let k = 0; k < yearCounts.length; k++) {
+      const y = firstYear + k;
+      if (CHUNKS.has(y)) yearCounts[k] = cum[lowerBound(T, Date.UTC(y + 1, 0, 1) / 1000)] - cum[lowerBound(T, Date.UTC(y, 0, 1) / 1000)];
+      total += yearCounts[k];
+    }
   }
   yearMax = Math.max(1, ...yearCounts);
   S.listDirty = true;

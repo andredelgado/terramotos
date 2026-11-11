@@ -9,6 +9,7 @@ import { S } from './state.js';
 import { applyCounts, applyMask, CHUNKS, E, ensureYear, firstYear, mask } from './store.js';
 import { openPage, storyTitles } from './page.js';
 import { writeHash } from './url.js';
+import { showNear } from './near.js';
 import { esc, pref, yearOf } from './util.js';
 import { scroller, view } from './views.js';
 
@@ -72,8 +73,8 @@ export function finishJump() {
   if (e < 0) return false;
   pendingJump = null;
   if (!mask[e]) {
-    S.minMag = 'all'; S.region = 'all'; magSel.value = 'all'; regSel.value = 'all';
-    pref('seis.mag', 'all'); pref('seis.region', 'all'); onFilter();
+    S.minMag = 'all'; S.region = 'all'; magSel.value = 'all'; regSel.value = 'all'; S.near = null;
+    pref('seis.mag', 'all'); pref('seis.region', 'all'); pref('seis.near', ''); showNear(); onFilter();
   }
   scrollToTime(E[e].t, 'center'); pin(e);
   return true;
