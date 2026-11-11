@@ -51,18 +51,27 @@ test('keyboard navigation selects adjacent earthquakes and reaches both timeline
 });
 
 test('time links keep the same moment after reloading', async ({ page, feed }) => {
+  const initial = /#v=list&t=2026-11-04T12:00:00$/;
+  const target = page.locator('#rows tr[data-e]').filter({ hasText: 'Test earthquake 50' });
   await page.goto('/#v=list&t=2026-11-04T12:00:00');
-  await expect(page.locator('#rows tr[data-e]')).not.toHaveCount(0);
-  await page.clock.runFor(500);
-  const shared = page.url();
-  expect(shared).toContain('t=2026-11-04T');
+  await expect(target).toBeInViewport();
+  await page.clock.runFor(300); // flush the 250 ms URL debounce after the target rows load
+  await expect(page).toHaveURL(initial);
   await page.reload();
-  await expect(page.locator('#rows tr[data-e]')).not.toHaveCount(0);
-  await page.clock.runFor(500);
-  await expect(page).toHaveURL(shared);
-  await page.locator('#list table').focus();
-  await page.keyboard.press('PageDown');
-  await expect(page).not.toHaveURL(shared);
+  await expect(target).toBeInViewport();
+  await page.clock.runFor(300);
+  await expect(page).toHaveURL(initial);
+
+  // The timeline handles Page Down itself. Native table paging can be ignored by mobile WebKit.
+  await page.locator('#railBox').press('PageDown');
+  const moved = /#v=list&t=2016-11-04T00:00:00$/;
+  const older = page.locator('#rows tr[data-e]').filter({ hasText: 'Azores Islands' });
+  await expect(older).toBeInViewport();
+  await expect(page).toHaveURL(moved);
+  await page.reload();
+  await expect(older).toBeInViewport();
+  await page.clock.runFor(300);
+  await expect(page).toHaveURL(moved);
 });
 
 test('theme preference persists and About explains the generated waves in both languages', async ({ page, feed }) => {
