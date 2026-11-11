@@ -19,6 +19,9 @@ jobs:
   browser:
     # Keep browser system dependencies on a fixed Ubuntu release, like the Python checks.
     runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
@@ -26,16 +29,10 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
       - run: npm ci
       - run: npm run lint
       - run: npm run test:analytics
       - run: npm run test:hosting
-      - name: Install the browser runtimes
-        timeout-minutes: 5
-        run: npx playwright install --with-deps chromium webkit
       - run: npm test
       - uses: actions/upload-artifact@v5
         if: ${{ !cancelled() }}
