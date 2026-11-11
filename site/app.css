@@ -267,18 +267,27 @@ dialog .get { margin-top: 12px; }
 dialog a { color: var(--fg); font-weight: 500; text-underline-offset: 3px; }
 footer a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
 .footer-links { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; }
-#catalogue summary { cursor: pointer; }
+/* the archive menu: a footer link like its neighbours that opens a card of links */
+#catalogue summary { cursor: pointer; list-style: none; }
+#catalogue summary::-webkit-details-marker { display: none; }
+#catalogue summary:hover, #catalogue[open] summary { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
 footer { position: relative; }
 .catalogue-panel {
   position: absolute; right: 0; bottom: 100%; z-index: 6; box-sizing: border-box;
   width: min(100%, 24rem); max-height: 65dvh; overflow: auto; padding: 14px 18px;
   border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); box-shadow: var(--shadow);
+  font-size: 13px; line-height: 1.45; margin-bottom: 6px;
 }
-.catalogue-panel .recent li { margin-bottom: .5rem; }
-.catalogue-panel small a { display: inline; }
-.catalogue-panel h2 { margin: 12px 0 4px; font-size: 14px; }
+.catalogue-panel nav { display: flex; flex-wrap: wrap; gap: 0 16px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.catalogue-panel nav a { font-weight: 500; }
+.catalogue-panel h2 { margin: 14px 0 2px; font-size: 12px; font-weight: 500; color: var(--muted); }
 .catalogue-panel ul { list-style: none; margin: 0; padding: 0; }
-.catalogue-panel a { display: block; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+.catalogue-panel a { display: block; padding: 4px 0; color: var(--fg); }
+.catalogue-panel a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.catalogue-panel .recent li { padding: 2px 0 6px; }
+.catalogue-panel small { display: block; margin-top: -2px; color: var(--muted); font-size: 12px; }
+.catalogue-panel small a { display: inline; padding: 0; color: inherit; }
+.catalogue-panel p { margin: 12px 0 0; color: var(--muted); font-size: 12px; }
 html[lang="en"] .catalogue-panel [lang="pt"], html[lang="pt"] .catalogue-panel [lang="en"] { display: none; }
 @media (scripting: none) {
   body { height: auto; overflow: auto; }

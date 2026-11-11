@@ -157,3 +157,12 @@ test('an earthquake with no magnitude or place still gets an image, and an unkno
   assert.equal(head.headers.get('Content-Type'), 'image/png');
   assert.equal((await head.arrayBuffer()).byteLength, 0);
 });
+
+test('the Worker only runs for earthquake pages, so everything else stays free of its request limit', async () => {
+  const { readFileSync } = await import('node:fs');
+  const config = JSON.parse(readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8').replace(/^\s*\/\/.*$/gm, ''));
+  assert.deepEqual(config.assets.run_worker_first, ['/sismo/*', '/en/sismo/*']);
+  assert.equal(config.assets.not_found_handling, '404-page');
+  const page = await fetchPage(`/sismo/${ID}`);
+  assert.equal(page.headers.get('Strict-Transport-Security'), 'max-age=31536000');
+});

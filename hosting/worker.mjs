@@ -8,6 +8,7 @@ const HEADERS = {
   'Content-Language': 'pt',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Strict-Transport-Security': 'max-age=31536000',
 };
 
 async function asset(env, path) {
@@ -42,7 +43,8 @@ export default {
       if (!record) return missing();
       if (image) {
         const drawn = new Response(request.method === 'HEAD' ? null : await previewPNG(record.event, lang), {
-          headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff' } });
+          headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff',
+            'Strict-Transport-Security': HEADERS['Strict-Transport-Security'] } });
         if (cache) ctx?.waitUntil(cache.put(request, drawn.clone()));
         return drawn;
       }

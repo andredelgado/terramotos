@@ -11,7 +11,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
-from site_archive import LANGS, browse_links, home_path, stamp, write_archive, write_landings
+from site_archive import CHROME, LANGS, browse_links, home_path, stamp, write_archive, write_landings
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE_URL = "https://terramotos.com"
@@ -104,6 +104,9 @@ def build(source, destination):
         (path / "index.html").write_text(html, encoding="utf-8")
     archive_paths = write_archive(destination, events, stories, SITE_URL)
     landing_paths = write_landings(destination, events, meta.get("generated"), SITE_URL)
+    # Cloudflare answers an unknown address with the nearest 404.html, so each language has its own
+    for lang in LANGS:
+        (destination / home_path(lang).strip("/") / "404.html").write_text(CHROME["notFound"][lang], encoding="utf-8")
 
     # Split below the sitemap protocol's 50,000-URL limit. These are a handful of assets, not
     # one static HTML file per earthquake (which would exceed the Workers Free asset limit).
@@ -130,7 +133,7 @@ def build(source, destination):
     ET.ElementTree(sitemap_index).write(destination / "sitemap.xml", encoding="utf-8", xml_declaration=True)
     (destination / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n", encoding="utf-8")
     (destination / "_headers").write_text(
-        "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n"
+        "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n  Strict-Transport-Security: max-age=31536000\n"
         f"/js-{version}/*\n  Cache-Control: public, max-age=31536000, immutable\n"
         "/app.css\n  Cache-Control: public, max-age=31536000, immutable\n"
         "/content/*\n  X-Robots-Tag: noindex\n"

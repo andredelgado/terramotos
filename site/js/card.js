@@ -3,13 +3,13 @@ import { SOURCES } from './config.js';
 import { locatorSVG } from './locator.js';
 import { drum, tip } from './dom.js';
 import { posOf, viewH } from './drum.js';
-import { agencyName, fmtDate, fmtDec, fmtTime, L, placeName, REGION } from './i18n.js';
+import { agencyName, fmtDate, fmtDec, fmtTime, L, lang, placeName, REGION } from './i18n.js';
 import { unpin } from './selection.js';
 import { S } from './state.js';
 import { E } from './store.js';
 import { viewHash } from './url.js';
 import { hasText, openPage } from './page.js';
-import { esc, kmBetween } from './util.js';
+import { esc, eventHref, kmBetween, plainLinkClick } from './util.js';
 import { view } from './views.js';
 
 /* ---------- tooltip ---------- */
@@ -41,7 +41,7 @@ export function tipHTML(e, isPinned) {
     (ev.live ? `<div class="prelim">${L.prelim}</div>` : `<div class="src">${L.source} ${esc(src)}</div>`) +
     (isPinned ? mapSVG(ev) + `<div class="links"><a href="${link[0]}" target="_blank" rel="noopener">${link[1]} ↗</a>` +
       (/^\d{8}-/.test(ev.id) ? `<button class="copy" type="button">${L.copy}</button>` : '') +
-      (/^\d{8}-/.test(ev.id) ? `<button class="story" type="button" data-story="${ev.id}">${hasText(ev.id) ? L.readStory : L.details}</button>` : '') + '</div>' : '');
+      (/^\d{8}-/.test(ev.id) ? `<a class="story" href="${eventHref(ev.id, lang)}" data-story="${ev.id}">${hasText(ev.id) ? L.readStory : L.details}</a>` : '') + '</div>' : '');
 }
 export let tipFor = -1, tipPinned = false, tipAt = null;
 export function showTip(e, isPinned, at) {
@@ -77,7 +77,8 @@ export function placeTip(vt) {
 tip.addEventListener('click', (ev) => {
   if (ev.target.closest('.close')) { unpin(); return; }
   const st = ev.target.closest('.story');
-  if (st) { openPage(st.dataset.story); return; }
+  // a plain click opens the earthquake's page here; its address is the permanent page, for a new tab or to copy
+  if (st) { if (plainLinkClick(ev)) { ev.preventDefault(); openPage(st.dataset.story); } return; }
   const c = ev.target.closest('.copy');
   if (c && navigator.clipboard) {
     const url = new URL(location.href);
