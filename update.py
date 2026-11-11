@@ -10,7 +10,7 @@ Keep the Portuguese earthquake catalogue up to date and write the site's data fi
   python3 update.py csv FILE   write every earthquake to a CSV file
   python3 update.py check      fail if a source has been failing for more than a day
 
-Options: --db data/quakes.sqlite  --site seismograph  --cache cache (raw downloads, backfill only)
+Options: --db data/quakes.sqlite  --site site  --cache cache (raw downloads, backfill only)
          --archive DIR  plain-file copy of every source record (off by default). Written after each
                         update; when the database is empty it is rebuilt from these files first,
                         with the same earthquake ids, so the database is only ever a cache.
@@ -177,7 +177,7 @@ def main():
     ap.add_argument("mode", choices=["backfill", "live", "daily", "monthly", "export", "csv", "check"])
     ap.add_argument("file", nargs="?", help="output file for csv")
     ap.add_argument("--db", default=os.path.join("data", "quakes.sqlite"))
-    ap.add_argument("--site", default="seismograph")
+    ap.add_argument("--site", default="site")
     ap.add_argument("--site-url", default=SITE_URL, help="public site URL used for RSS links")
     ap.add_argument("--cache", default="cache", help="raw downloads kept between backfills")
     ap.add_argument("--archive", help="folder holding a plain-file copy of every source record")

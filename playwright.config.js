@@ -20,7 +20,7 @@ module.exports = defineConfig({
     { name: 'phone-webkit', use: { ...devices['iPhone 13'] } },
   ],
   webServer: {
-    command: 'python3 -m http.server 8765 --bind 127.0.0.1 --directory seismograph',
+    command: 'node tests/browser/server.js site 8765',
     url: 'http://127.0.0.1:8765',
     reuseExistingServer: false,
     stdout: 'ignore',

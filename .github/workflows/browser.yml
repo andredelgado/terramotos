@@ -3,9 +3,9 @@ name: Browser checks
 on:
   push:
     branches: [main]
-    paths: ["seismograph/**", "tests/browser/**", "tests/analytics.test.js", "package*.json", "playwright.config.js", ".github/workflows/browser.yml"]
+    paths: ["site/**", "hosting/**", "tests/browser/**", "tests/analytics.test.js", "package*.json", "playwright.config.js", "eslint.config.js", ".github/workflows/browser.yml"]
   pull_request:
-    paths: ["seismograph/**", "tests/browser/**", "tests/analytics.test.js", "package*.json", "playwright.config.js", ".github/workflows/browser.yml"]
+    paths: ["site/**", "hosting/**", "tests/browser/**", "tests/analytics.test.js", "package*.json", "playwright.config.js", "eslint.config.js", ".github/workflows/browser.yml"]
   workflow_dispatch:
 
 permissions:
@@ -17,7 +17,11 @@ concurrency:
 
 jobs:
   browser:
-    runs-on: ubuntu-latest
+    # Keep browser system dependencies on a fixed Ubuntu release, like the Python checks.
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
@@ -25,12 +29,10 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
       - run: npm ci
+      - run: npm run lint
       - run: npm run test:analytics
-      - run: npx playwright install --with-deps chromium webkit
+      - run: npm run test:hosting
       - run: npm test
       - uses: actions/upload-artifact@v5
         if: ${{ !cancelled() }}

@@ -3,7 +3,7 @@ const { readFileSync } = require('node:fs');
 const { test } = require('node:test');
 const vm = require('node:vm');
 
-const source = readFileSync(new URL('../seismograph/analytics.js', `file://${__filename}`), 'utf8');
+const source = readFileSync(new URL('../site/analytics.js', `file://${__filename}`), 'utf8');
 
 function browser({ url = 'https://andredelgado.github.io/terramotos/', endpoint = 'https://terramotos.goatcounter.com/count',
   navigator = {}, hidden = false, prerender = false, frame = false, fetchFailure = false, windowDnt } = {}) {
@@ -48,6 +48,15 @@ test('six fixed view/language paths are counted once per page open', () => {
     ['/pt/seismograph', '/pt/list', '/pt/map', '/en/seismograph', '/en/list', '/en/map']);
   assert.equal(calls[0].url.searchParams.get('t'), 'Seismograph · Português');
   assert.equal(calls[5].url.searchParams.get('t'), 'Map · English');
+});
+
+test('the custom production domain uses the same cookieless counts', () => {
+  const { counter, calls } = browser({ url: 'https://terramotos.com/?private=value#v=map&q=19690228-c63c' });
+  counter.count('map', 'en');
+  assert.equal(counter.enabled, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url.searchParams.get('p'), '/en/map');
+  assert.doesNotMatch(calls[0].url.href, /private|19690228/);
 });
 
 test('requests omit cookies, referrers, shared links, filters, screen data and persistent storage', () => {
