@@ -153,8 +153,17 @@ def write_archive(destination, events, stories, origin):
                 title = f'Sismos em {year}' if pt else f'Earthquakes in {year}'
                 if pages > 1:
                     title += f' · {page_word} {page}/{pages}'
-                desc = f'{count(len(group))}. ' + ("Do mais recente ao mais antigo. Horas em UTC." if pt
-                                                    else "Newest first. Times in UTC.")
+                records = group[i * PAGE_SIZE:page * PAGE_SIZE]
+                earliest, latest = stamp(records[-1]).date(), stamp(records[0]).date()
+                if pt:
+                    period = (f"em {earliest:%d/%m/%Y}" if earliest == latest
+                              else f"de {earliest:%d/%m/%Y} a {latest:%d/%m/%Y}")
+                    desc = f"Sismos registados em Portugal {period} (UTC). O arquivo de {year} reúne {count(len(group))}."
+                else:
+                    period = f"on {earliest}" if earliest == latest else f"from {earliest} to {latest}"
+                    desc = f"Earthquakes recorded in Portugal {period} (UTC). The {year} archive lists {count(len(group))}."
+                if pages > 1:
+                    desc += f" {page_word} {page} {'de' if pt else 'of'} {pages}."
                 nav = f'<nav><a href="{archive_path(lang)}">{name}</a>'
                 if i:
                     nav += f'<a rel="prev" href="{archive_path(lang, year, page - 1)}">← {"Mais recentes" if pt else "Newer"}</a>'
@@ -170,7 +179,7 @@ def write_archive(destination, events, stories, origin):
                                for j in range(1, pages))
                     jump = ('<details><summary>' + ("Escolher por data" if pt else "Choose by date")
                             + '</summary><ul>' + "".join(choices) + '</ul></details>')
-                items = event_list(lang, group[i * PAGE_SIZE:page * PAGE_SIZE])
+                items = event_list(lang, records)
                 featured = story_list(lang, [s for s in stories if s["id"].startswith(str(year))]) if page == 1 else ""
                 write(year, page, title, desc, f'{nav}{featured}{jump}<ul class="events">{items}</ul>{nav}')
     return paths
@@ -204,8 +213,12 @@ def write_landings(destination, events, generated, origin):
                           f"Nos 30 dias anteriores ({start} a {middle_day}), registou {previous}." if pt else
                           f"The catalogue recorded {recent} earthquakes in this region from {middle} to {end_day}. "
                           f"In the preceding 30 days ({start} to {middle_day}), it recorded {previous}.")
-            desc = (f"{len(group)} registos no catálogo para esta região, incluindo a área marítima envolvente. Horas em UTC."
-                    if pt else f"{len(group)} catalogue records for this region, including the surrounding sea. Times in UTC.")
+            if pt:
+                total = "1 registo" if len(group) == 1 else f"{len(group)} registos"
+                desc = f"{title}, incluindo a área marítima envolvente. Consulte o catálogo ({total}) e compare a atividade em dois períodos de 30 dias."
+            else:
+                total = "1 record" if len(group) == 1 else f"{len(group)} records"
+                desc = f"{title}, including nearby waters. Browse the catalogue ({total}) and compare activity across two 30-day periods."
             body = (f'<p><a href="{home_path(lang)}#v=map&amp;period=30d&amp;r={r}">'
                     + ("Ver os últimos 30 dias no mapa" if pt else "See the last 30 days on the map")
                     + '</a></p><h2>' + ("Comparação de dois períodos de 30 dias" if pt else "Two 30-day periods compared")

@@ -118,6 +118,14 @@ class SiteBuildTests(unittest.TestCase):
             second = self.output / year.strip("/") / "2/index.html"
             self.assertIn(year + "2/", Anchors(first).hrefs)
             self.assertIn(year, Anchors(second).hrefs)
+            for number, path in enumerate((first, second), start=1):
+                description = re.search(r'<meta name="description" content="([^"]+)">', path.read_text())[1]
+                if prefix:
+                    self.assertIn("on 2020-01-01", description)
+                    self.assertIn(f"Page {number} of 2", description)
+                else:
+                    self.assertIn("em 01/01/2020", description)
+                    self.assertIn(f"Página {number} de 2", description)
             event_links = [u for f in (first, second) for u in Anchors(f).hrefs if u.startswith(event)]
             self.assertEqual(set(event_links), {event + i for i in ids})
             self.assertIn("A &amp; &lt;B&gt;", first.read_text())
