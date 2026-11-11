@@ -1,10 +1,10 @@
 const { test, expect } = require('./fixtures');
 
 async function mapWindow(page) {
-  await expect(page).toHaveURL(/from=.*to=/);
+  await expect(page.locator('#range')).toHaveAttribute('title', /Z – .*Z$/);
   return page.evaluate(() => {
-    const p = new URLSearchParams(location.hash.slice(1));
-    return { from: new Date(p.get('from')).toISOString(), to: new Date(p.get('to')).toISOString() };
+    const [from, to] = document.querySelector('#range').title.split(' – ');
+    return { from, to };
   });
 }
 
@@ -22,6 +22,11 @@ async function redDot(canvas) {
 }
 
 test('the first map uses the last 24 hours and the returning visitor keeps their view', async ({ page, feed }) => {
+  await page.addInitScript(() => {
+    window.historyWrites = 0;
+    const replace = history.replaceState.bind(history);
+    history.replaceState = (...args) => { window.historyWrites++; return replace(...args); };
+  });
   const origins = new Set();
   page.on('request', (request) => origins.add(new URL(request.url()).origin));
   await page.goto('/');
@@ -29,11 +34,16 @@ test('the first map uses the last 24 hours and the returning visitor keeps their
   await page.getByRole('button', { name: 'Map', exact: true }).click();
   await expect(page.locator('#inview')).toHaveText('8 in view');
   await expect(page.locator('.map-count')).toHaveText(['3', '3', '2']);
+  await page.clock.runFor(500);
+  await expect(page).toHaveURL(/#v=map$/);
+  const url = page.url(), writes = await page.evaluate(() => window.historyWrites);
   const range = await mapWindow(page);
   expect(Date.parse(range.to) - Date.parse(range.from)).toBe(86400000);
   await page.clock.fastForward('01:00');
   await page.clock.runFor(500);
   expect(Date.parse((await mapWindow(page)).to)).toBeGreaterThan(Date.parse(range.to));
+  await expect(page).toHaveURL(url);
+  expect(await page.evaluate(() => window.historyWrites)).toBe(writes);
   expect([...origins]).toEqual(expect.arrayContaining(['http://127.0.0.1:8765']));
   expect([...origins].every((origin) => ['http://127.0.0.1:8765', 'https://api.ipma.pt'].includes(origin))).toBe(true);
   await page.goto('/');
@@ -41,16 +51,38 @@ test('the first map uses the last 24 hours and the returning visitor keeps their
   await expect(page.locator('#inview')).toHaveText('8 in view');
 });
 
-test('shared map dates remain fixed after reload and after a day passes', async ({ page, feed }) => {
+test('copying a rolling map snapshots dates, filters and selection without freezing the original', async ({ page, feed }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', { value: {
+      writeText(text) { window.copiedLink = text; return Promise.resolve(); },
+    } });
+  });
   await page.goto('/#v=map');
   await expect(page.locator('#inview')).toHaveText('8 in view');
   await page.locator('#periods button[data-period="7d"]').click();
   await expect(page.locator('#inview')).toHaveText('56 in view');
+  await page.locator('#mag').selectOption('3');
+  await page.locator('#region').selectOption('0');
+  await page.locator('.map-panel[data-region="0"] canvas').focus();
+  await page.keyboard.press('End');
+  await expect(page.locator('#tip .where')).toHaveText('Newest earthquake');
   await page.clock.runFor(500);
-  const range = await mapWindow(page), shared = page.url();
+  const rolling = page.url();
+  await expect(page).toHaveURL(/period=7d&m=3&r=0&q=20261110-0000$/);
+  await page.locator('#tip .copy').click();
+  const range = await mapWindow(page), shared = await page.evaluate(() => window.copiedLink);
+  const params = new URLSearchParams(new URL(shared).hash.slice(1));
+  expect(Object.fromEntries(params)).toEqual({ v: 'map', ...range, m: '3', r: '0', q: '20261110-0000' });
   expect(Date.parse(range.to) - Date.parse(range.from)).toBe(7 * 86400000);
+  await page.clock.fastForward('01:00');
+  await page.clock.runFor(500);
+  await expect(page).toHaveURL(rolling);
+  expect(Date.parse((await mapWindow(page)).to)).toBeGreaterThan(Date.parse(range.to));
+  await page.goto(shared);
+  await expect(page.locator('#tip .where')).toHaveText('Newest earthquake');
+  await expect.poll(() => mapWindow(page)).toEqual(range);
   await page.reload();
-  await expect(page.locator('#inview')).toHaveText('56 in view');
+  await expect(page.locator('#periods button[data-period="view"]')).toHaveAttribute('aria-pressed', 'true');
   await page.clock.fastForward('24:00:00');
   await expect(page).toHaveURL(shared);
   expect(await mapWindow(page)).toEqual(range);
@@ -83,6 +115,17 @@ test('map filters and time choices preserve their state in links', async ({ page
   await page.clock.runFor(500);
   const year = await mapWindow(page);
   expect(Date.parse(year.to) - Date.parse(year.from)).toBe(365 * 86400000);
+  await expect(page).toHaveURL(/#v=map&period=1y$/);
+  const rolling = page.url();
+  await page.reload();
+  await expect(page.locator('#periods button[data-period="1y"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.clock.fastForward('01:00');
+  await page.clock.runFor(500);
+  await expect(page).toHaveURL(rolling);
+  expect(Date.parse((await mapWindow(page)).to)).toBeGreaterThan(Date.parse(year.to));
+  await page.goto('/#v=map');
+  await expect(page.locator('#periods button[data-period="24h"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page).toHaveURL(/#v=map$/);
 });
 
 test('entering the map from a historical drum carries the visible period', async ({ page, feed }) => {
@@ -90,6 +133,7 @@ test('entering the map from a historical drum carries the visible period', async
   await expect(page.locator('#tip .mag')).toContainText('7.8');
   await page.getByRole('button', { name: 'Map', exact: true }).click();
   await expect(page.locator('#inview')).toHaveText('3 in view');
+  await expect(page).toHaveURL(/from=.*to=/);
   const range = await mapWindow(page), eventTime = Date.parse('1969-02-28T02:40:34Z');
   expect(Date.parse(range.from)).toBeLessThan(eventTime);
   expect(Date.parse(range.to)).toBeGreaterThan(eventTime);
@@ -103,6 +147,7 @@ test('a historical selection and its map window carry across all three views', a
   await page.getByRole('button', { name: 'Map', exact: true }).click();
   await expect(page.locator('#tip .mag')).toContainText('7.8');
   await page.clock.runFor(500);
+  await expect(page).toHaveURL(/from=.*to=/);
   const range = await mapWindow(page), eventTime = Date.parse('1969-02-28T02:40:34Z');
   expect(Date.parse(range.from)).toBeLessThanOrEqual(eventTime);
   expect(Date.parse(range.to)).toBeGreaterThanOrEqual(eventTime);

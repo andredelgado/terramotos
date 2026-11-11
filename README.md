@@ -8,8 +8,11 @@ The map adds three fixed geographic panels using the bundled coastlines, with pr
 dots, magnitude-scaled outer circles, and a separate scale for each region. It opens on the last
 24 hours; the period control
 also offers 7 days, 30 days and a year. Entering from a historical drum or list carries its visible
-period and selected earthquake across. Shared map links include exact UTC `from` and `to` dates,
-so they reopen the same period. Dots can be selected by touch or with the arrow keys.
+period and selected earthquake across. Rolling map periods keep a stable address (`#v=map` for
+24 hours, `#v=map&period=7d` for a week). The earthquake card's Copy link button captures exact
+UTC `from` and `to` dates so the recipient reopens the same period, while the original map keeps
+rolling. Historical map addresses also retain their exact dates. Dots can be selected by touch
+or with the arrow keys.
 
 The panels show Portugal with its neighbours, the main cities and islands, and the plate boundaries
 that explain where the earthquakes are. Active faults and volcanoes can be switched on under the

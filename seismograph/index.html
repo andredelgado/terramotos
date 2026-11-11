@@ -1189,7 +1189,11 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   tip.addEventListener('click', (ev) => {
     if (ev.target.closest('.close')) { unpin(); return; }
     const c = ev.target.closest('.copy');
-    if (c && navigator.clipboard) { syncHash(); navigator.clipboard.writeText(location.href).then(() => { c.textContent = L.copied; }, () => {}); }
+    if (c && navigator.clipboard) {
+      const url = new URL(location.href);
+      url.hash = viewHash(true); // snapshot the map period in the shared link, keeping this view live
+      navigator.clipboard.writeText(url.href).then(() => { c.textContent = L.copied; }, () => {});
+    }
   });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('#about').open) unpin(); });
   function pin(e) {
@@ -1204,13 +1208,12 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   /* ---------- the view in the URL: #s=span&m=magnitude&r=region, then q=earthquake or t=time ---------- */
   let booted = false, hashTimer = 0;
   function countUsage() { if (booted) window.terramotosUsage?.count(view, lang); }
-  function syncHash() {
-    clearTimeout(hashTimer);
-    if (!booted) return;
+  function viewHash(fixedMap = false) {
     const p = [];
     if (view !== 'drum') p.push('v=' + view);
     if (view === 'map') {
-      p.push('from=' + new Date(mapFrom * 1000).toISOString(), 'to=' + new Date(mapTo * 1000).toISOString());
+      if (!mapLive || fixedMap) p.push('from=' + new Date(mapFrom * 1000).toISOString(), 'to=' + new Date(mapTo * 1000).toISOString());
+      else if (mapLive !== '24h') p.push('period=' + mapLive);
     }
     if (span !== '3h') p.push('s=' + span);
     if (minMag !== 'all') p.push('m=' + minMag);
@@ -1218,7 +1221,12 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     const sharedId = pendingJump ? pendingJump.id : pinnedId;
     if (sharedId && /^\d{8}-/.test(sharedId)) p.push('q=' + sharedId);
     else if (view !== 'map' && scroller().scrollTop > 0) p.push('t=' + new Date(centerTime() * 1000).toISOString().slice(0, 19));
-    const h = p.length ? '#' + p.join('&') : '';
+    return p.length ? '#' + p.join('&') : '';
+  }
+  function syncHash() {
+    clearTimeout(hashTimer);
+    if (!booted) return;
+    const h = viewHash();
     if (h !== location.hash) history.replaceState(null, '', h || location.pathname + location.search);
   }
   function writeHash() { clearTimeout(hashTimer); hashTimer = setTimeout(syncHash, 250); }
@@ -1235,13 +1243,14 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     const from = parseMapDate(p.get('from')), to = parseMapDate(p.get('to'));
     const mapDates = view === 'map' && Number.isFinite(from) && Number.isFinite(to) && to > from;
     if (mapDates) setMapRange(from, to, null, true);
+    else if (view === 'map') chooseMapPeriod(Object.hasOwn(MAP_PERIODS, p.get('period')) ? p.get('period') : '24h');
     const q = p.get('q') || '', time = p.get('t') || '';
     const ts = /^\d{4}-\d{2}-\d{2}T\d{2}(?::\d{2}){0,2}$/.test(time)
       ? Date.parse(time + (time.length === 13 ? ':00:00Z' : time.length === 16 ? ':00Z' : 'Z')) / 1000 : NaN;
     const qt = Date.UTC(+q.slice(0, 4), +q.slice(4, 6) - 1, +q.slice(6, 8), 12) / 1000;
     if (/^\d{8}-\w+$/.test(q) && Number.isFinite(qt)) jumpTo(qt, q);
     else if (Number.isFinite(ts)) { unpin(); scrollToTime(ts, 'center'); }
-    else { unpin(); if (!mapDates) setVTop(0); }
+    else { unpin(); if (view !== 'map') setVTop(0); }
     schedule(); writeHash();
   }
   window.addEventListener('hashchange', applyHash);
@@ -1332,7 +1341,8 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     unpin();
     const request = ++jumpRequest;
     if (id) pendingJump = { id, request };
-    scrollToTime(t, 'center');
+    // A shared ID only estimates the day until loaded; don't shift a fixed map to that estimate.
+    if (view !== 'map' || !id) scrollToTime(t, 'center');
     if (!id) return;
     ensureYear(yearOf(t)).then(() => {
       if (request !== jumpRequest || !pendingJump) return;
@@ -1609,7 +1619,7 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
     loadGeo();
     if (mapLive) {
       const end = Math.max(END, Date.now() / 1000);
-      if (end !== mapTo) { mapTo = end; mapFrom = end - MAP_PERIODS[mapLive]; writeHash(); }
+      if (end !== mapTo) { mapTo = end; mapFrom = end - MAP_PERIODS[mapLive]; }
     }
     const waiting = [];
     for (let y = yearOf(mapFrom); y <= yearOf(mapTo); y++) {
