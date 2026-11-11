@@ -9,7 +9,7 @@ module.exports = [
       globals: Object.fromEntries(['window', 'document', 'navigator', 'location', 'history', 'localStorage', 'fetch', 'WebSocket',
         'URL', 'URLSearchParams', 'Path2D', 'ResizeObserver', 'MutationObserver', 'Event', 'matchMedia', 'getComputedStyle',
         'requestAnimationFrame', 'setTimeout', 'clearTimeout', 'setInterval', 'performance', 'innerWidth', 'console',
-        'Request', 'Response', 'structuredClone'].map((name) => [name, 'readonly'])),
+        'Request', 'Response', 'structuredClone', 'atob', 'Blob', 'CompressionStream', 'DecompressionStream'].map((name) => [name, 'readonly'])),
     },
     rules: {
       'no-undef': 'error',

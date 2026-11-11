@@ -110,3 +110,41 @@ test('HEAD keeps the page headers without a body, and writes are rejected', asyn
 test('the home page is served through the asset binding', async () => {
   assert.match(await (await fetchPage('/')).text(), /<title>App<\/title>/);
 });
+
+test('each earthquake has its own preview image, in the page language, and its page points at it', async () => {
+  const html = await (await fetchPage(`/en/sismo/${ID}`)).text();
+  assert.match(html, /property="og:image" content="https:\/\/terramotos.com\/en\/sismo\/19690228-c63c.png"/);
+  const size = (bytes) => [new DataView(bytes).getUint32(16), new DataView(bytes).getUint32(20)];
+  const pt = await fetchPage(`/sismo/${ID}.png`), en = await fetchPage(`/en/sismo/${ID}.png`);
+  assert.equal(pt.status, 200);
+  assert.equal(pt.headers.get('Content-Type'), 'image/png');
+  assert.equal(pt.headers.get('Cache-Control'), 'public, max-age=86400');
+  const ptBytes = await pt.arrayBuffer(), enBytes = await en.arrayBuffer();
+  assert.deepEqual([...new Uint8Array(ptBytes, 0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  assert.deepEqual(size(ptBytes), [1200, 630]);
+  assert.notDeepEqual(new Uint8Array(ptBytes), new Uint8Array(enBytes)); // "7,8" and a Portuguese date against "7.8"
+  // the picture unpacks to exactly one palette index per pixel, plus a filter byte per row
+  const view = new DataView(ptBytes);
+  let at = 8, packed = null;
+  while (at < ptBytes.byteLength) {
+    const length = view.getUint32(at), type = String.fromCharCode(...new Uint8Array(ptBytes, at + 4, 4));
+    if (type === 'IDAT') packed = new Uint8Array(ptBytes, at + 8, length);
+    at += 12 + length;
+  }
+  const pixels = await new Response(new Blob([packed]).stream().pipeThrough(new DecompressionStream('deflate'))).arrayBuffer();
+  assert.equal(pixels.byteLength, 1201 * 630);
+  assert.ok(new Uint8Array(pixels).some((value) => value > 0));
+});
+
+test('an earthquake with no magnitude or place still gets an image, and an unknown one does not', async () => {
+  const bare = { ...EVENT, id: '19690228-2222', m: null, place: '' };
+  const response = await fetchPage('/sismo/19690228-2222.png', environment({ [pageAsset('19690228-2222')]: { '19690228-2222': { event: bare, nearby: { count: 0, events: [] } } } }));
+  assert.equal(response.status, 200);
+  assert.ok((await response.arrayBuffer()).byteLength > 1000);
+  const missing = await fetchPage('/sismo/19690228-dead.png');
+  assert.equal(missing.status, 404);
+  assert.equal(missing.headers.get('Cache-Control'), 'no-store');
+  const head = await fetchPage(`/sismo/${ID}.png`, environment(), { method: 'HEAD' });
+  assert.equal(head.headers.get('Content-Type'), 'image/png');
+  assert.equal((await head.arrayBuffer()).byteLength, 0);
+});

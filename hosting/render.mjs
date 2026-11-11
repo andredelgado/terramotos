@@ -23,12 +23,12 @@ const FORMATS = Object.fromEntries(['pt', 'en'].map((lang) => [lang, {
   date: new Intl.DateTimeFormat(I18N[lang].loc, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }),
 }]));
 
-function documentHTML({ lang, title, description, canonical, alternate, body, noindex = false }) {
+function documentHTML({ lang, title, description, canonical, alternate, body, image = 'https://terramotos.com/share.png', noindex = false }) {
   const L = I18N[lang];
   return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(title)} · Terramotos Portugal</title><meta name="description" content="${esc(description)}">
 ${noindex ? '<meta name="robots" content="noindex">' : `<link rel="canonical" href="${esc(canonical)}"><link rel="alternate" hreflang="${lang}" href="${esc(canonical)}"><link rel="alternate" hreflang="${lang === 'pt' ? 'en' : 'pt'}" href="${esc(alternate)}">`}
-<meta property="og:type" content="article"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description)}"><meta property="og:url" content="${esc(canonical)}"><meta property="og:image" content="https://terramotos.com/share.png"><meta name="twitter:card" content="summary_large_image">
+<meta property="og:type" content="article"><meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(description)}"><meta property="og:url" content="${esc(canonical)}"><meta property="og:image" content="${esc(image)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="alternate" type="application/rss+xml" title="Terramotos Portugal" href="/rss.xml"><style>${CSS}</style><script>${THEME}</script></head><body>
 <header><a href="/">Terramotos Portugal</a><nav>${alternate ? `<a href="${esc(alternate)}" lang="${lang === 'pt' ? 'en' : 'pt'}">${L.other}</a>` : ''}<button id="theme" type="button" aria-label="${L.aTheme}">◐</button></nav></header>
 <main>${body}</main><footer>${lang === 'pt' ? 'Dados de' : 'Data from'} <a href="https://www.ipma.pt/pt/geofisica/sismicidade/">IPMA</a>, <a href="https://www.isc.ac.uk/iscbulletin/">ISC</a>, <a href="https://www.seismicportal.eu/">EMSC</a> ${lang === 'pt' ? 'e' : 'and'} <a href="https://earthquake.usgs.gov/">USGS</a>. ${L.utc}.</footer></body></html>`;
@@ -55,7 +55,7 @@ ${ev.inten || ev.felt ? `<p>${esc(ev.inten ? L.feltI(ev.inten) : L.felt)}</p>` :
 ${ev.m != null && ev.au ? `<p>${esc(L.magBy(agencyName(ev.au)))}</p>` : ''}<p>${L.source} ${esc(sources)}</p></div>
 <nav class="links"><a href="/#s=1d&q=${ev.id}">${L.onDrum}</a><a href="/#v=map&from=${iso(ev.t - 86400)}&to=${iso(ev.t + 30 * 86400)}&q=${ev.id}">${L.onMap}</a><a href="/#v=list&q=${ev.id}">${L.onList}</a><a href="${esc(source[0])}" rel="noopener">${esc(source[1])} ↗</a></nav>
 <h2>${L.nearTitle}</h2><p>${nearby.count ? esc(L.near(nearby.count)) + (nearby.count > nearby.events.length ? ' ' + esc(L.nearMore(nearby.events.length)) : '') : L.nearNone}</p>${nearbyHTML ? `<ul class="nearby">${nearbyHTML}</ul>` : ''}`;
-  return documentHTML({ lang, title, description, canonical, alternate, body });
+  return documentHTML({ lang, title, description, canonical, alternate, body, image: canonical + '.png' });
 }
 
 export function renderError(lang, status) {
