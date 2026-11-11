@@ -36,15 +36,19 @@ test('playback fills the map in from the start of the period and can be paused a
   await expect(page.locator('#inview')).toHaveText('56 in view');
   const play = page.locator('#playBtn'), inview = page.locator('#inview');
   const shown = async () => Number((await inview.textContent()).split(' ')[0]);
+  // Playback moves by the time that has passed, so a jump followed by a few frames shows the same
+  // map as drawing every frame of those seconds, and takes the same time on a slow machine.
+  const advance = async (ms) => { await page.clock.fastForward(ms); await page.clock.runFor(100); };
   await expect(play).toHaveAttribute('aria-pressed', 'false');
 
   await play.click();
   await expect(play).toHaveAttribute('aria-pressed', 'true');
-  await page.clock.runFor(3000);
+  await page.clock.runFor(100); // the first frames start the clock
+  await advance(3000);
   const early = await shown();
   expect(early).toBeGreaterThan(0);
   expect(early).toBeLessThan(40);
-  await page.clock.runFor(3000);
+  await advance(3000);
   const later = await shown();
   expect(later).toBeGreaterThan(early);
 
@@ -52,7 +56,7 @@ test('playback fills the map in from the start of the period and can be paused a
   await expect(play).toHaveAttribute('aria-pressed', 'false');
   await page.clock.runFor(200);
   const paused = await shown();
-  await page.clock.runFor(3000);
+  await advance(3000);
   expect(await shown()).toBe(paused);
 
   await page.locator('#scrub').fill('500');
@@ -62,7 +66,8 @@ test('playback fills the map in from the start of the period and can be paused a
   expect(half).toBeLessThan(36);
 
   await play.click(); // resumes from the scrubbed moment and runs to the end
-  await page.clock.runFor(20000);
+  await page.clock.runFor(100);
+  await advance(20000);
   await expect(inview).toHaveText('56 in view');
   await expect(play).toHaveAttribute('aria-pressed', 'false');
   await expect(page.locator('#scrub')).toHaveValue('1000');
