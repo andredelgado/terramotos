@@ -57,7 +57,7 @@ export function applyHash() {
   else if (view === 'map') chooseMapPeriod(p.get('period') === 'all' || Object.hasOwn(MAP_PERIODS, p.get('period')) ? p.get('period') : '24h');
   if (view === 'map' && ['depth', 'age'].includes(p.get('c'))) setColour(p.get('c'));
   if (view === 'stats') setStatsPeriod(Object.hasOwn(STAT_PERIODS, p.get('sp')) ? p.get('sp') : 'all');
-  const page = p.get('page') || p.get('story'); // story= is the older form, with a short key
+  const page = p.get('page');
   if (page) openPage(page); else if (pageDlg.open) pageDlg.close();
   if (view === 'stats') { unpin(); schedule(); writeHash(); return; }
   const q = p.get('q') || '', time = p.get('t') || '';

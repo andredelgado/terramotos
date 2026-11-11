@@ -31,13 +31,12 @@ and writes the magnitude on those of 5 or more.
 filters match: earthquakes and energy per year, month or day, the spread of magnitudes and the
 busiest days. Bars and days open on the seismograph. Energy is an estimate, log E = 1.5 M + 4.8.
 
-**Earthquake pages** (`#page=<id>`): every earthquake in the catalogue has a page with its
+**Earthquake pages** (`/sismo/<id>` and `/en/sismo/<id>`): every earthquake in the catalogue has a page with its
 details, a locator map, the other earthquakes within 50 km in the week before and after, and links
 that open the seismograph, the map and the list at that earthquake. It opens from the card
 ("Details"). An earthquake with a text of its own is a **story**: the text is a Markdown file in
 `content/quakes/`, one per language, and those earthquakes are listed under Stories in the footer
-and the Jump menu. See [content/README.md](content/README.md) for the format. Older `#story=`
-links still open.
+and the Jump menu. See [content/README.md](content/README.md) for the format.
 
 That geography is `site/map.json` (25 KB), fetched the first time the map is opened, and
 `site/faults.json` (22 KB), fetched only when the faults are switched on. Both are built by
@@ -106,17 +105,17 @@ deployment only exports the data already stored.
 
 ## RSS
 
-Subscribe to [Terramotos Portugal RSS](https://andredelgado.github.io/terramotos/rss.xml) in a feed
+Subscribe to [Terramotos Portugal RSS](https://terramotos.com/rss.xml) in a feed
 reader or another tool. The page also advertises the feed automatically and links to it in the footer.
 
 `site/rss.xml` contains the 100 most recent merged earthquakes, newest first, with no
-magnitude filter. Each item links to the selected earthquake and includes its UTC time, magnitude
+magnitude filter. Each item links to the earthquake's permanent page and includes its UTC time, magnitude
 and scale, region, location, depth, coordinates, sources, and felt intensity when available.
 The feed is in Portuguese. Revisions retain the same GUID, including after rebuilding the database
 from the archive, so feed readers can recognise an updated earthquake.
 
 Every successful update or `python3 update.py export` rebuilds the feed alongside the site data.
-The hourly job publishes it to GitHub Pages; it does not use the browser's live connection.
+The hourly job publishes it to Cloudflare; it does not use the browser's live connection.
 The feed suggests a 60-minute refresh interval. When hosting elsewhere, pass
 `--site-url https://example.org/terramotos/` to set the absolute feed and earthquake links.
 
@@ -236,36 +235,16 @@ catalogue. Data is grouped into eight files per month to stay within the Workers
 and file-size limits. The Worker is checked with `npm run test:hosting`; `npm run deploy` builds
 and publishes through the pinned Wrangler version.
 
-The hourly/daily/monthly update job publishes to Cloudflare when repository variable
-`CLOUDFLARE_DEPLOY` is `true`. It uses encrypted repository secret `CLOUDFLARE_API_TOKEN`, scoped
-to **Individual Workers Editor** on **terramotos-portugal** only. The account id is public and is
+The hourly/daily/monthly update job publishes to Cloudflare. It uses encrypted repository secret
+`CLOUDFLARE_API_TOKEN`, scoped to **Individual Workers Editor** on **terramotos-portugal** only.
+The account id is public and is
 set in `wrangler.jsonc`. Domain connections are configured once in Cloudflare; routine deployments
 do not alter DNS or require DNS permissions. Renew the deployment token before its expiry.
 
-After a successful Cloudflare deployment, the same job publishes a small GitHub Pages redirect
-that preserves old view/earthquake fragments and query parameters. It continues serving the RSS
-feed at its old address; item links use terramotos.com, while GUIDs stay unchanged so existing
-subscribers do not receive the catalogue again. If Cloudflare deployment is not enabled, the job
-continues to publish the full app to GitHub Pages.
-
-## GitHub Pages fallback
-
-1. Push this folder to a GitHub repository (branch `main`).
-2. Settings → Pages → *Build and deployment* → Source: **GitHub Actions**.
-3. Actions → *Update earthquakes* → *Run workflow*. With no `data` branch yet, the first run is a
-   backfill (about an hour) and creates it.
-
-After that, `.github/workflows/update.yml` runs on its own: hourly, daily and monthly. Each run
-checks out the `data` branch, rebuilds the database from it, fetches, commits what changed and
-publishes the site. Nothing is kept in caches.
-
-Things to know:
-- GitHub runs scheduled jobs on a best-effort basis; delays and skipped runs happen. The page does
-  not depend on them to be current.
-- On a public repository, GitHub pauses scheduled workflows after 60 days without activity. Any
-  commit (or re-enabling the workflow) starts them again.
-- Any other static host works the same way: run `update.py --archive DIR` on a schedule, keep
-  `DIR` somewhere durable, and serve `site/`.
+Each run checks out the `data` branch, rebuilds the database, fetches new records, commits what
+changed and publishes the site. With no archive yet, the first run backfills the catalogue.
+GitHub's schedules are best effort; the independent Cloudflare watchdog described above covers
+missed updates. The app also reads the live feeds between deployments.
 
 ## Files
 
@@ -273,7 +252,7 @@ Things to know:
 - `scheduler/`: independent hourly Cloudflare watchdog, local freshness check, and tests
 - `hosting/`: the Cloudflare earthquake-page server and its checks
 - `wrangler.jsonc`: the site Worker's account, asset binding and routing configuration
-- `tools/build_site.py`: prepares the Cloudflare assets, page data, sitemaps and legacy redirect
+- `tools/build_site.py`: prepares the Cloudflare assets, page data and sitemaps
 - `tools/build_map.py`: builds `site/map.json` (land, plate boundaries, volcanoes, labels) and
   `site/faults.json` (active faults)
 - `quake/sources.py`: readers for IPMA, the ISC, EMSC and USGS
@@ -283,7 +262,7 @@ Things to know:
 - `site/index.html`: the page's markup; it reads `site/data/meta.json` and one file per year
   from `site/data/years/`, loaded as you scroll
 - `site/app.css`: the styles, with the light and dark colours as variables at the top
-- `site/js/`: the page's code as plain ES modules, with no build step and no framework.
+- `site/js/`: the page's code as native ES modules, with no framework.
   `main.js` is the entry point. `state.js` holds the state that more than one module changes;
   everything else is imported by name. One module per concern: `store.js` (the catalogue in
   memory), `feeds.js` (IPMA, EMSC and the site's own data), `drum.js`, `list.js`, `stats.js` and

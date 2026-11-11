@@ -148,7 +148,7 @@ test('stories open from the footer, a link and the card, in both languages', asy
   await expect(page.locator('#views [data-view="map"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#tip .where')).toHaveText('Azores-Cape St. Vincent Ridge');
   await expect(page.locator('#inview')).toHaveText('3 in view'); // from the day before to a month after
-  await expect(page).not.toHaveURL(/story=/);
+  await expect(page).not.toHaveURL(/page=/);
 
   await page.locator('#lang').click();
   await page.locator('#tip .story').click();
@@ -173,10 +173,6 @@ test('every earthquake has a page with its details and the earthquakes around it
   await expect(page).toHaveURL(/page=19690228-c63c/);
   await page.keyboard.press('Escape');
   await expect(page).not.toHaveURL(/page=/);
-
-  // an old story link still opens the same page
-  await page.goto('/#story=1980');
-  await expect(page).toHaveURL(/page=19800101-95df/);
 
   // the card of any earthquake leads to its page
   await page.goto('/#v=list&q=19690228-2222');

@@ -19,7 +19,7 @@ class SiteBuildTests(unittest.TestCase):
         (self.source / "js").mkdir()
         (self.source / "content").mkdir()
         (self.source / "content/index.json").write_text("[]", encoding="utf-8")
-        (self.source / "index.html").write_text('<link href="app.css"><script src="js/main.js"></script><meta content="https://andredelgado.github.io/terramotos/"></head>', encoding="utf-8")
+        (self.source / "index.html").write_text('<link href="app.css"><script src="js/main.js"></script><link rel="canonical" href="https://terramotos.com/"></head>', encoding="utf-8")
         (self.source / "app.css").write_text("body{color:black}", encoding="utf-8")
         (self.source / "js/main.js").write_text("import './child.js';", encoding="utf-8")
         (self.source / "js/child.js").write_text("// child", encoding="utf-8")
@@ -29,10 +29,10 @@ class SiteBuildTests(unittest.TestCase):
                        "p": [0], "places": ["Test"], "s": [1], "k": [""], "felt": [], "intensity": []}
         (self.source / "data/years/2020.json").write_text(json.dumps(self.packed), encoding="utf-8")
         (self.source / "rss.xml").write_text('''<rss xmlns:atom="http://www.w3.org/2005/Atom"><channel>
-<link>https://andredelgado.github.io/terramotos/</link><atom:link href="https://andredelgado.github.io/terramotos/rss.xml"/>
-<item><link>https://andredelgado.github.io/terramotos/#q=20200101-abcd</link><guid isPermaLink="true">https://andredelgado.github.io/terramotos/#q=20200101-abcd</guid></item></channel></rss>''', encoding="utf-8")
+<link>https://terramotos.com/</link><atom:link href="https://terramotos.com/rss.xml"/>
+<item><link>https://terramotos.com/sismo/20200101-abcd</link><guid isPermaLink="true">https://terramotos.com/sismo/20200101-abcd</guid></item></channel></rss>''', encoding="utf-8")
 
-    def test_domain_links_sitemaps_and_feed_change_without_changing_guids_or_source(self):
+    def test_build_prepares_pages_and_sitemaps_without_changing_source_or_feed(self):
         source_index = (self.source / "index.html").read_bytes()
         count, assets = build_site.build(self.source, self.output)
         self.assertEqual(count, 1)
@@ -40,10 +40,10 @@ class SiteBuildTests(unittest.TestCase):
         self.assertEqual((self.source / "index.html").read_bytes(), source_index)
         index = (self.output / "index.html").read_text(encoding="utf-8")
         self.assertIn('rel="canonical" href="https://terramotos.com/"', index)
-        self.assertNotIn("andredelgado.github.io", index)
+        self.assertEqual((self.output / "rss.xml").read_bytes(), (self.source / "rss.xml").read_bytes())
         feed = ET.parse(self.output / "rss.xml").getroot()
         self.assertEqual(feed.findtext("channel/item/link"), "https://terramotos.com/sismo/20200101-abcd")
-        self.assertEqual(feed.findtext("channel/item/guid"), "https://andredelgado.github.io/terramotos/#q=20200101-abcd")
+        self.assertEqual(feed.findtext("channel/item/guid"), "https://terramotos.com/sismo/20200101-abcd")
         namespace = {"s": build_site.SITEMAP}
         index = ET.parse(self.output / "sitemap.xml")
         self.assertEqual(len(index.findall("s:sitemap", namespace)), 2)
@@ -71,14 +71,6 @@ class SiteBuildTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 build_site.build(self.source, output)
         self.assertTrue((self.source / "index.html").exists())
-
-    def test_the_legacy_site_preserves_fragments_and_the_rss_feed(self):
-        build_site.build(self.source, self.output)
-        legacy = self.output.parent / "github-pages"
-        build_site.legacy(self.output, legacy)
-        html = (legacy / "index.html").read_text(encoding="utf-8")
-        self.assertIn('location.replace("https://terramotos.com/"+location.search+location.hash)', html)
-        self.assertEqual((legacy / "rss.xml").read_bytes(), (self.output / "rss.xml").read_bytes())
 
     def test_prepared_neighbours_cross_years_and_exclude_distant_quakes(self):
         previous = dict(self.packed)

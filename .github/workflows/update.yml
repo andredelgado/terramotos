@@ -26,8 +26,6 @@ on:
 
 permissions:
   contents: write  # to commit to the data branch
-  pages: write
-  id-token: write
 
 concurrency:
   group: earthquakes
@@ -38,8 +36,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 180
     environment:
-      name: github-pages
-      url: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && 'https://terramotos.com/' || steps.deploy.outputs.page_url }}
+      name: production
+      url: https://terramotos.com/
     steps:
       - uses: actions/checkout@v4
 
@@ -110,46 +108,23 @@ jobs:
         run: python3 tools/build_content.py
 
       - uses: actions/setup-node@v6
-        if: vars.CLOUDFLARE_DEPLOY == 'true'
         with:
           node-version: "24"
           cache: npm
 
       - name: Install the pinned deployment tools
-        if: vars.CLOUDFLARE_DEPLOY == 'true'
         run: npm ci
 
       - name: Check the earthquake page server
-        if: vars.CLOUDFLARE_DEPLOY == 'true'
         run: npm run test:hosting
 
       - name: Build for terramotos.com
-        if: vars.CLOUDFLARE_DEPLOY == 'true'
-        run: python3 tools/build_site.py --legacy-out dist/github-pages
+        run: python3 tools/build_site.py
 
       - name: Deploy to Cloudflare
-        if: vars.CLOUDFLARE_DEPLOY == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npm exec -- wrangler deploy
-
-      # Browsers keep a file for ten minutes. Giving the modules and the stylesheet a new address
-      # whenever the code changes means nobody runs a mix of old and new files after a release.
-      - name: Stamp the code with its version
-        if: vars.CLOUDFLARE_DEPLOY != 'true'
-        run: |
-          v=$(find site/js site/app.css -type f | sort | xargs cat | sha1sum | cut -c1-8)
-          mv site/js "site/js-$v"
-          sed -i "s|\"js/|\"js-$v/|g; s|\"app.css\"|\"app.css?v=$v\"|" site/index.html
-
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && 'dist/github-pages' || 'site' }}
-
-      - id: deploy
-        uses: actions/deploy-pages@v4
 
       # after publishing, so a long outage of one source turns the run red without stopping the site
       - name: Check for sources that have been failing for more than a day

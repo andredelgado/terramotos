@@ -5,7 +5,7 @@ const vm = require('node:vm');
 
 const source = readFileSync(new URL('../site/analytics.js', `file://${__filename}`), 'utf8');
 
-function browser({ url = 'https://andredelgado.github.io/terramotos/', endpoint = 'https://terramotos.goatcounter.com/count',
+function browser({ url = 'https://terramotos.com/', endpoint = 'https://terramotos.goatcounter.com/count',
   navigator = {}, hidden = false, prerender = false, frame = false, fetchFailure = false, windowDnt } = {}) {
   const calls = [], listeners = {};
   const context = {
@@ -50,17 +50,8 @@ test('six fixed view/language paths are counted once per page open', () => {
   assert.equal(calls[5].url.searchParams.get('t'), 'Map · English');
 });
 
-test('the custom production domain uses the same cookieless counts', () => {
-  const { counter, calls } = browser({ url: 'https://terramotos.com/?private=value#v=map&q=19690228-c63c' });
-  counter.count('map', 'en');
-  assert.equal(counter.enabled, true);
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0].url.searchParams.get('p'), '/en/map');
-  assert.doesNotMatch(calls[0].url.href, /private|19690228/);
-});
-
 test('requests omit cookies, referrers, shared links, filters, screen data and persistent storage', () => {
-  const { counter, calls } = browser({ url: 'https://andredelgado.github.io/terramotos/?secret=do-not-send#v=map&q=19690228-c63c&m=3&from=2020-01-01' });
+  const { counter, calls } = browser({ url: 'https://terramotos.com/?secret=do-not-send#v=map&q=19690228-c63c&m=3&from=2020-01-01' });
   counter.count('map', 'en');
   const [{ url, options }] = calls;
   assert.equal(url.origin + url.pathname, 'https://terramotos.goatcounter.com/count');
@@ -80,11 +71,12 @@ test('Do Not Track and Global Privacy Control prevent every request', () => {
   }
 });
 
-test('localhost, previews, other GitHub projects and unconfigured endpoints stay uncounted', () => {
+test('only the production app and a configured endpoint can send counts', () => {
   for (const options of [
     { url: 'http://localhost:8000/' }, { url: 'http://127.0.0.1:8765/terramotos/' },
     { url: 'https://terramotos-portugal-preview.light-bay-9610.chatgpt.site/' },
-    { url: 'https://andredelgado.github.io/another-project/' },
+    { url: 'https://andredelgado.github.io/terramotos/' },
+    { url: 'https://terramotos.com/sismo/19690228-c63c' },
     { endpoint: '' }, { endpoint: 'http://terramotos.goatcounter.com/count' },
     { endpoint: 'https://terramotos.goatcounter.com.evil.example/count' },
   ]) {
@@ -93,7 +85,7 @@ test('localhost, previews, other GitHub projects and unconfigured endpoints stay
     assert.equal(counter.enabled, false);
     assert.equal(calls.length, 0);
   }
-  assert.equal(browser({ url: 'https://andredelgado.github.io/terramotos/index.html' }).counter.enabled, true);
+  assert.equal(browser({ url: 'https://terramotos.com/index.html' }).counter.enabled, true);
 });
 
 test('unrecognised views or languages cannot turn into arbitrary tracked paths', () => {

@@ -77,7 +77,7 @@ test('prepared nearby events retain their own permanent links across a year boun
 });
 
 test('missing and malformed earthquake URLs return a real, uncacheable 404', async () => {
-  for (const path of ['/sismo/19690228-dead', '/sismo/19690228-c634', '/sismo/20250101-abcd', '/sismo/not-an-id', '/en/sismo/%3Cscript%3E']) {
+  for (const path of ['/sismo/19690228-dead', '/sismo/19690228-c634', '/sismo/20250101-abcd', '/sismo/not-an-id', '/en/sismo/%3Cscript%3E', `/sismo/${ID}/unused`]) {
     const response = await fetchPage(path);
     assert.equal(response.status, 404, path);
     assert.equal(response.headers.get('Cache-Control'), 'no-store');
@@ -92,10 +92,7 @@ test('an unavailable catalogue is a retryable server error rather than a false 4
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
 });
 
-test('aliases redirect to a stable canonical ID and www redirects to the apex', async () => {
-  const alias = await fetchPage(`/en/sismo/${ID}/28-february-1969`);
-  assert.equal(alias.status, 301);
-  assert.equal(alias.headers.get('Location'), `https://terramotos.com/en/sismo/${ID}`);
+test('www redirects to the apex', async () => {
   const www = await worker.fetch(new Request('https://www.terramotos.com/?example=1'), environment());
   assert.equal(www.status, 301);
   assert.equal(www.headers.get('Location'), 'https://terramotos.com/?example=1');

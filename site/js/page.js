@@ -17,7 +17,7 @@ export let pageOpen = null; // null: closed; '': the list of stories; otherwise 
 
 // the earthquakes that have a text of their own, written in content/quakes/ and built by tools/build_content.py
 const TEXTS = new Map(), BODIES = new Map();
-const textsReady = fetch('content/index.json')
+fetch('content/index.json')
   .then((r) => (r.ok ? r.json() : []))
   .then((list) => {
     for (const entry of list) TEXTS.set(entry.id, entry);
@@ -100,12 +100,9 @@ export function renderPage() {
     `<a href="${link[0]}" target="_blank" rel="noopener">${link[1]} ↗</a>` +
     `<button class="copy" type="button">${L.copy}</button></p>`;
 }
-/** Open an earthquake's page by id, or the list of stories with ''. An old #story= key still works. */
+/** Open an earthquake's page by id, or the list of stories with ''. */
 export function openPage(ref) {
-  if (ref && !ID.test(ref)) {
-    textsReady.then(() => { const hit = [...TEXTS.values()].find((x) => x.key === ref); openPage(hit ? hit.id : ''); });
-    return;
-  }
+  if (ref && !ID.test(ref)) return;
   pageOpen = ref;
   renderPage();
   if (!pageDlg.open) pageDlg.showModal();
