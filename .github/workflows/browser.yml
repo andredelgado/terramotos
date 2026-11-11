@@ -17,7 +17,8 @@ concurrency:
 
 jobs:
   browser:
-    runs-on: ubuntu-latest
+    # Keep browser system dependencies on a fixed Ubuntu release, like the Python checks.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
@@ -32,7 +33,9 @@ jobs:
       - run: npm run lint
       - run: npm run test:analytics
       - run: npm run test:hosting
-      - run: npx playwright install --with-deps chromium webkit
+      - name: Install the browser runtimes
+        timeout-minutes: 5
+        run: npx playwright install --with-deps chromium webkit
       - run: npm test
       - uses: actions/upload-artifact@v5
         if: ${{ !cancelled() }}
