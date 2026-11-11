@@ -1,7 +1,7 @@
 # Terramotos Portugal: the dataset
 
 Every recorded earthquake in mainland Portugal, the Azores and Madeira since 1909, merged from four
-catalogues into one list. This is the data behind https://andredelgado.github.io/terramotos/ and it
+catalogues into one list. This is the data behind https://terramotos.com/ and it
 is rebuilt from the sources on a schedule, so later downloads include revisions and new events.
 
 Download: https://github.com/andredelgado/terramotos/releases/download/dataset/terramotos-portugal.zip

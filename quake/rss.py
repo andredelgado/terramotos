@@ -7,7 +7,7 @@ import tempfile
 from urllib.parse import quote
 import xml.etree.ElementTree as ET
 
-SITE_URL = "https://andredelgado.github.io/terramotos/"
+SITE_URL = "https://terramotos.com/"
 ITEM_LIMIT = 100
 ATOM = "http://www.w3.org/2005/Atom"
 REGIONS = {"continente": "Continente", "acores": "Açores", "madeira": "Madeira"}
@@ -37,7 +37,7 @@ def write_rss(path, events, site_url=SITE_URL):
         region = REGIONS[event["region"]]
         place = event["place"] or region
         magnitude = f"M {event['mag']:.1f}" if event["mag"] is not None else "Magnitude não disponível"
-        url = site_url + "#q=" + quote(event["id"], safe="")
+        url = site_url + "sismo/" + quote(event["id"], safe="")
         timestamp = dt.datetime.fromtimestamp(event["time"], dt.timezone.utc)
         add(item, "title", f"{magnitude} · {place}")
         add(item, "link", url)

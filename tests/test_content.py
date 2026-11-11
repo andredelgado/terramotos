@@ -25,12 +25,12 @@ class ContentTests(unittest.TestCase):
 
     def test_index_lists_each_earthquake_with_its_languages(self):
         with tempfile.TemporaryDirectory() as folder:
-            Path(folder, "20200101-ab12.en.md").write_text("---\ntitle: One\nsummary: First\nkey: one\n---\n\nText.\n", encoding="utf-8")
+            Path(folder, "20200101-ab12.en.md").write_text("---\ntitle: One\nsummary: First\n---\n\nText.\n", encoding="utf-8")
             Path(folder, "20200101-ab12.pt.md").write_text("---\ntitle: Um\n---\n\nTexto.\n", encoding="utf-8")
             Path(folder, "notes.txt").write_text("ignored", encoding="utf-8")
             files = build_content.build(folder)
         self.assertEqual(sorted(files), ["20200101-ab12.en.html", "20200101-ab12.pt.html", "index.json"])
-        self.assertIn('{"id":"20200101-ab12","en":{"title":"One","summary":"First"},"key":"one","pt":{"title":"Um","summary":""}}',
+        self.assertIn('{"id":"20200101-ab12","en":{"title":"One","summary":"First"},"pt":{"title":"Um","summary":""}}',
                       files["index.json"])
         self.assertEqual(files["20200101-ab12.pt.html"], "<p>Texto.</p>\n")
 

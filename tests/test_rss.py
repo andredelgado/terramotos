@@ -47,7 +47,7 @@ class FeedTests(unittest.TestCase):
         self.assertEqual(root.attrib, {"version": "2.0"})
         channel = root.find("channel")
         self.assertEqual(channel.findtext("title"), "Terramotos Portugal")
-        self.assertEqual(channel.findtext("link"), SITE_URL)
+        self.assertEqual(channel.findtext("link"), "https://terramotos.com/")
         self.assertTrue(channel.findtext("description"))
         self.assertEqual(channel.findtext("language"), "pt-PT")
         self.assertEqual(channel.findtext("ttl"), "60")
@@ -62,7 +62,7 @@ class FeedTests(unittest.TestCase):
         for item in items:
             self.assertEqual(item.find("guid").attrib, {"isPermaLink": "true"})
             self.assertEqual(item.findtext("guid"), item.findtext("link"))
-            self.assertTrue(item.findtext("link").startswith(SITE_URL + "#q=20200101-"))
+            self.assertTrue(item.findtext("link").startswith(SITE_URL + "sismo/20200101-"))
 
     def test_sources_merge_and_revisions_reuse_the_guid_even_after_archive_rebuild(self):
         self.replace("ipma", [record()])
@@ -118,7 +118,7 @@ class FeedTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         channel = ET.parse(self.site / "rss.xml").find("channel")
         self.assertEqual(channel.findtext("link"), "https://example.org/earthquakes/")
-        self.assertTrue(channel.findtext("item/link").startswith("https://example.org/earthquakes/#q="))
+        self.assertTrue(channel.findtext("item/link").startswith("https://example.org/earthquakes/sismo/"))
         self.assertEqual(channel.find(f"{{{ATOM}}}link").get("href"), "https://example.org/earthquakes/rss.xml")
         self.assertTrue((self.site / "data" / "meta.json").is_file())
 

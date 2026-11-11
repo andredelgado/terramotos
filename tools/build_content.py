@@ -85,8 +85,6 @@ def build(source=SOURCE):
                 continue
             fields, body = by_lang[lang]
             entry[lang] = {"title": fields["title"], "summary": fields.get("summary", "")}
-            if fields.get("key"):
-                entry["key"] = fields["key"]
             files[f"{eid}.{lang}.html"] = body
         index.append(entry)
     files["index.json"] = json.dumps(index, ensure_ascii=False, separators=(",", ":")) + "\n"

@@ -9,13 +9,11 @@ from collections import defaultdict
 import datetime as dt
 from pathlib import Path
 import shutil
-from urllib.parse import parse_qs, urlsplit
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE_URL = "https://terramotos.com"
 SITEMAP = "http://www.sitemaps.org/schemas/sitemap/0.9"
-ATOM = "http://www.w3.org/2005/Atom"
 NEAR_SECONDS = 7 * 86400
 
 
@@ -87,23 +85,7 @@ def build(source, destination):
     (destination / "js").rename(destination / f"js-{version}")
     index = (destination / "index.html").read_text(encoding="utf-8")
     index = index.replace('"js/', f'"js-{version}/').replace('"app.css"', f'"app.css?v={version}"')
-    index = index.replace("https://andredelgado.github.io/terramotos/", SITE_URL + "/")
-    index = index.replace("</head>", f'<link rel="canonical" href="{SITE_URL}/">\n</head>')
     (destination / "index.html").write_text(index, encoding="utf-8")
-
-    # A hosting change must not give existing RSS subscribers a new GUID for every old earthquake.
-    feed_path = destination / "rss.xml"
-    feed = ET.parse(feed_path)
-    channel = feed.getroot().find("channel")
-    channel.find("link").text = SITE_URL + "/"
-    channel.find(f"{{{ATOM}}}link").set("href", SITE_URL + "/rss.xml")
-    for item in channel.findall("item"):
-        event_id = parse_qs(urlsplit(item.findtext("link")).fragment).get("q", [None])[0]
-        if not event_id:
-            raise ValueError("RSS item has no permanent earthquake id")
-        item.find("link").text = SITE_URL + "/sismo/" + event_id
-    ET.register_namespace("atom", ATOM)
-    feed.write(feed_path, encoding="utf-8", xml_declaration=True)
 
     # Split below the sitemap protocol's 50,000-URL limit. These are a handful of assets, not
     # one static HTML file per earthquake (which would exceed the Workers Free asset limit).
@@ -137,26 +119,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=ROOT / "site")
     parser.add_argument("--out", type=Path, default=ROOT / "dist/cloudflare")
-    parser.add_argument("--legacy-out", type=Path, help="also build the GitHub Pages redirect and compatible RSS feed")
     args = parser.parse_args()
     events, files = build(args.source, args.out)
-    if args.legacy_out:
-        legacy(args.out, args.legacy_out)
     print(f"Cloudflare: {events} earthquakes, {files} static assets in {args.out}")
-
-
-def legacy(built_site, destination):
-    """Keep old # links and RSS subscriptions working after the custom domain takes over."""
-    destination = Path(destination)
-    destination.mkdir(parents=True, exist_ok=True)
-    html = ('<!doctype html><html lang="pt"><head><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width,initial-scale=1">'
-            '<title>Terramotos Portugal</title><link rel="canonical" href="https://terramotos.com/">'
-            '<script>location.replace("https://terramotos.com/"+location.search+location.hash)</script>'
-            '<noscript><meta http-equiv="refresh" content="0;url=https://terramotos.com/"></noscript>'
-            '</head><body><p><a href="https://terramotos.com/">Terramotos Portugal → terramotos.com</a></p></body></html>')
-    (destination / "index.html").write_text(html, encoding="utf-8")
-    shutil.copyfile(Path(built_site) / "rss.xml", destination / "rss.xml")
 
 
 if __name__ == "__main__":
