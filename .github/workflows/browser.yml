@@ -3,9 +3,9 @@ name: Browser checks
 on:
   push:
     branches: [main]
-    paths: ["site/**", "tests/browser/**", "tests/analytics.test.js", "package*.json", "playwright.config.js", "eslint.config.js", ".github/workflows/browser.yml"]
+    paths: ["site/**", "hosting/**", "tests/browser/**", "tests/analytics.test.js", "package*.json", "playwright.config.js", "eslint.config.js", ".github/workflows/browser.yml"]
   pull_request:
-    paths: ["site/**", "tests/browser/**", "tests/analytics.test.js", "package*.json", "playwright.config.js", "eslint.config.js", ".github/workflows/browser.yml"]
+    paths: ["site/**", "hosting/**", "tests/browser/**", "tests/analytics.test.js", "package*.json", "playwright.config.js", "eslint.config.js", ".github/workflows/browser.yml"]
   workflow_dispatch:
 
 permissions:
@@ -31,6 +31,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run test:analytics
+      - run: npm run test:hosting
       - run: npx playwright install --with-deps chromium webkit
       - run: npm test
       - uses: actions/upload-artifact@v5

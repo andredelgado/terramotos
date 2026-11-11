@@ -50,6 +50,15 @@ test('six fixed view/language paths are counted once per page open', () => {
   assert.equal(calls[5].url.searchParams.get('t'), 'Map · English');
 });
 
+test('the custom production domain uses the same cookieless counts', () => {
+  const { counter, calls } = browser({ url: 'https://terramotos.com/?private=value#v=map&q=19690228-c63c' });
+  counter.count('map', 'en');
+  assert.equal(counter.enabled, true);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url.searchParams.get('p'), '/en/map');
+  assert.doesNotMatch(calls[0].url.href, /private|19690228/);
+});
+
 test('requests omit cookies, referrers, shared links, filters, screen data and persistent storage', () => {
   const { counter, calls } = browser({ url: 'https://andredelgado.github.io/terramotos/?secret=do-not-send#v=map&q=19690228-c63c&m=3&from=2020-01-01' });
   counter.count('map', 'en');

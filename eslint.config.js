@@ -2,13 +2,14 @@
 // module's binding, and imports that are no longer used.
 module.exports = [
   {
-    files: ['site/js/**/*.js'],
+    files: ['site/js/**/*.js', 'hosting/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 2023,
       sourceType: 'module',
       globals: Object.fromEntries(['window', 'document', 'navigator', 'location', 'history', 'localStorage', 'fetch', 'WebSocket',
         'URL', 'URLSearchParams', 'Path2D', 'ResizeObserver', 'MutationObserver', 'Event', 'matchMedia', 'getComputedStyle',
-        'requestAnimationFrame', 'setTimeout', 'clearTimeout', 'setInterval', 'performance', 'innerWidth', 'console'].map((name) => [name, 'readonly'])),
+        'requestAnimationFrame', 'setTimeout', 'clearTimeout', 'setInterval', 'performance', 'innerWidth', 'console',
+        'Request', 'Response', 'structuredClone'].map((name) => [name, 'readonly'])),
     },
     rules: {
       'no-undef': 'error',

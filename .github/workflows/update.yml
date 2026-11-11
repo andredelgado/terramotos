@@ -22,7 +22,7 @@ on:
         default: live
   push:
     branches: [main]
-    paths: ["site/**", "content/**", "tools/build_content.py", "quake/**", "update.py", ".github/workflows/update.yml"]
+    paths: ["site/**", "content/**", "hosting/**", "tools/build_content.py", "tools/build_site.py", "wrangler.jsonc", "package*.json", "quake/**", "update.py", ".github/workflows/update.yml"]
 
 permissions:
   contents: write  # to commit to the data branch
@@ -39,7 +39,7 @@ jobs:
     timeout-minutes: 180
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && 'https://terramotos.com/' || steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -109,9 +109,34 @@ jobs:
       - name: Build the earthquake pages' text
         run: python3 tools/build_content.py
 
+      - uses: actions/setup-node@v6
+        if: vars.CLOUDFLARE_DEPLOY == 'true'
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install the pinned deployment tools
+        if: vars.CLOUDFLARE_DEPLOY == 'true'
+        run: npm ci
+
+      - name: Check the earthquake page server
+        if: vars.CLOUDFLARE_DEPLOY == 'true'
+        run: npm run test:hosting
+
+      - name: Build for terramotos.com
+        if: vars.CLOUDFLARE_DEPLOY == 'true'
+        run: python3 tools/build_site.py --legacy-out dist/github-pages
+
+      - name: Deploy to Cloudflare
+        if: vars.CLOUDFLARE_DEPLOY == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm exec -- wrangler deploy
+
       # Browsers keep a file for ten minutes. Giving the modules and the stylesheet a new address
       # whenever the code changes means nobody runs a mix of old and new files after a release.
       - name: Stamp the code with its version
+        if: vars.CLOUDFLARE_DEPLOY != 'true'
         run: |
           v=$(find site/js site/app.css -type f | sort | xargs cat | sha1sum | cut -c1-8)
           mv site/js "site/js-$v"
@@ -121,7 +146,7 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: ${{ vars.CLOUDFLARE_DEPLOY == 'true' && 'dist/github-pages' || 'site' }}
 
       - id: deploy
         uses: actions/deploy-pages@v4

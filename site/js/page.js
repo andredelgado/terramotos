@@ -124,7 +124,10 @@ pageDlg.addEventListener('click', (ev) => {
   else if (ev.target.closest('.back')) openPage('');
   else if (copy) {
     const url = new URL(location.href);
-    url.hash = 'page=' + pageOpen;
+    if (url.hostname === 'terramotos.com' || url.hostname === 'www.terramotos.com') {
+      url.hostname = 'terramotos.com'; url.pathname = `${lang === 'en' ? '/en' : ''}/sismo/${pageOpen}`;
+      url.hash = ''; url.search = '';
+    } else url.hash = 'page=' + pageOpen;
     navigator.clipboard?.writeText(url.href).then(() => { copy.textContent = L.copied; }, () => {});
   } else if (ev.target === pageDlg || ev.target.closest('.close') || ev.target.closest('a:not([target])')) pageDlg.close();
 });

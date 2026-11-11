@@ -3,9 +3,9 @@ name: Python checks
 on:
   push:
     branches: [main]
-    paths: ["quake/**", "update.py", "content/**", "site/content/**", "tools/build_content.py", "tests/test_*.py", ".github/workflows/python.yml"]
+    paths: ["quake/**", "update.py", "content/**", "site/content/**", "tools/build_content.py", "tools/build_site.py", "tests/test_*.py", ".github/workflows/python.yml"]
   pull_request:
-    paths: ["quake/**", "update.py", "content/**", "site/content/**", "tools/build_content.py", "tests/test_*.py", ".github/workflows/python.yml"]
+    paths: ["quake/**", "update.py", "content/**", "site/content/**", "tools/build_content.py", "tools/build_site.py", "tests/test_*.py", ".github/workflows/python.yml"]
   workflow_dispatch:
 
 permissions:

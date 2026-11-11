@@ -4,12 +4,17 @@
   "license": "MIT",
   "scripts": {
     "test": "playwright test",
-    "lint": "eslint site/js",
+    "lint": "eslint site/js hosting",
     "test:analytics": "node --test tests/analytics.test.js",
+    "test:hosting": "node --test hosting/worker.test.mjs",
+    "build": "python3 tools/build_content.py && python3 tools/build_site.py",
+    "dev:hosting": "wrangler dev",
+    "deploy": "npm run build && wrangler deploy",
     "test:ui": "playwright test --ui"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
-    "eslint": "^10.14.0"
+    "eslint": "^10.14.0",
+    "wrangler": "4.160.0"
   }
 }

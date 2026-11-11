@@ -214,7 +214,41 @@ the report and failure traces for seven days. `npm run test:ui` opens the intera
 The analytics checks run with Node's test runner and mocked requests; they never send test visits
 to the real counter.
 
-## Hosting on GitHub Pages
+## Hosting on Cloudflare
+
+The production address is `https://terramotos.com/`. The `terramotos-portugal` Worker serves the
+app and renders one complete HTML page for each earthquake at `/sismo/<id>` (Portuguese) and
+`/en/sismo/<id>` (English). These addresses keep the permanent catalogue id even if a magnitude
+or place name is revised. The pages share the app's locator map, place translations and Markdown
+story text. They include canonical and language-alternate links and per-earthquake preview text.
+
+```bash
+npm ci
+python3 update.py export --archive archive
+npm run build
+npm run dev:hosting
+```
+
+`tools/build_site.py` writes `dist/cloudflare/`: the static app with versioned modules, prepared
+earthquake data, the RSS feed and split Portuguese/English sitemaps. Nearby earthquakes are
+calculated during the build, so a page request makes one asset lookup instead of searching the
+catalogue. Data is grouped into eight files per month to stay within the Workers Free asset count
+and file-size limits. The Worker is checked with `npm run test:hosting`; `npm run deploy` builds
+and publishes through the pinned Wrangler version.
+
+The hourly/daily/monthly update job publishes to Cloudflare when repository variable
+`CLOUDFLARE_DEPLOY` is `true`. It uses encrypted repository secret `CLOUDFLARE_API_TOKEN`, scoped
+to **Individual Workers Editor** on **terramotos-portugal** only. The account id is public and is
+set in `wrangler.jsonc`. Domain connections are configured once in Cloudflare; routine deployments
+do not alter DNS or require DNS permissions. Renew the deployment token before its expiry.
+
+After a successful Cloudflare deployment, the same job publishes a small GitHub Pages redirect
+that preserves old view/earthquake fragments and query parameters. It continues serving the RSS
+feed at its old address; item links use terramotos.com, while GUIDs stay unchanged so existing
+subscribers do not receive the catalogue again. If Cloudflare deployment is not enabled, the job
+continues to publish the full app to GitHub Pages.
+
+## GitHub Pages fallback
 
 1. Push this folder to a GitHub repository (branch `main`).
 2. Settings → Pages → *Build and deployment* → Source: **GitHub Actions**.
@@ -237,6 +271,9 @@ Things to know:
 
 - `update.py`: the command line
 - `scheduler/`: independent hourly Cloudflare watchdog, local freshness check, and tests
+- `hosting/`: the Cloudflare earthquake-page server and its checks
+- `wrangler.jsonc`: the site Worker's account, asset binding and routing configuration
+- `tools/build_site.py`: prepares the Cloudflare assets, page data, sitemaps and legacy redirect
 - `tools/build_map.py`: builds `site/map.json` (land, plate boundaries, volcanoes, labels) and
   `site/faults.json` (active faults)
 - `quake/sources.py`: readers for IPMA, the ISC, EMSC and USGS
