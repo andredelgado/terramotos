@@ -5,7 +5,7 @@
   const production = location.origin === 'https://andredelgado.github.io' &&
     /^\/terramotos(?:\/(?:index\.html)?)?$/.test(location.pathname);
   const enabled = production && /^https:\/\/[a-z0-9-]+\.goatcounter\.com\/count$/.test(endpoint);
-  const views = { drum: 'Seismograph', list: 'List', map: 'Map' };
+  const views = { drum: 'Seismograph', list: 'List', map: 'Map', stats: 'Statistics' };
   const languages = { en: 'English', pt: 'Português' };
   const seen = new Set(), pending = new Map();
 

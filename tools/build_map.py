@@ -2,8 +2,8 @@
 """
 Build the geography the map view draws:
 
-  seismograph/map.json     land, plate boundaries, volcanoes and labels
-  seismograph/faults.json  active faults (a separate file because its licence is share-alike)
+  site/map.json     land, plate boundaries, volcanoes and labels
+  site/faults.json  active faults (a separate file because its licence is share-alike)
 
   python3 tools/build_map.py
 
@@ -38,13 +38,13 @@ import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CACHE = os.path.join(ROOT, "cache")
-OUT = os.path.join(ROOT, "seismograph", "map.json")
+OUT = os.path.join(ROOT, "site", "map.json")
 COUNTRIES = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries.geojson"
 PLATES = "https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json"
 VOLCANOES = ("https://webservices.volcano.si.edu/geoserver/GVP-VOTW/ows?service=WFS&version=1.0.0&request=GetFeature"
              "&typeName=GVP-VOTW:Smithsonian_VOTW_Holocene_Volcanoes&outputFormat=application/json")
 FAULTS = "https://raw.githubusercontent.com/GEMScienceTools/gem-global-active-faults/master/geojson/gem_active_faults_harmonized.geojson"
-FAULTS_OUT = os.path.join(ROOT, "seismograph", "faults.json")
+FAULTS_OUT = os.path.join(ROOT, "site", "faults.json")
 
 # wide enough for what a panel shows beyond its region on a wide screen
 WEST, EAST, SOUTH, NORTH = -46.0, 3.0, 25.0, 47.0

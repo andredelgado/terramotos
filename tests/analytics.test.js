@@ -3,7 +3,7 @@ const { readFileSync } = require('node:fs');
 const { test } = require('node:test');
 const vm = require('node:vm');
 
-const source = readFileSync(new URL('../seismograph/analytics.js', `file://${__filename}`), 'utf8');
+const source = readFileSync(new URL('../site/analytics.js', `file://${__filename}`), 'utf8');
 
 function browser({ url = 'https://andredelgado.github.io/terramotos/', endpoint = 'https://terramotos.goatcounter.com/count',
   navigator = {}, hidden = false, prerender = false, frame = false, fetchFailure = false, windowDnt } = {}) {

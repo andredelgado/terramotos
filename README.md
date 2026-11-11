@@ -19,8 +19,23 @@ that explain where the earthquakes are. Active faults and volcanoes can be switc
 maps, and the choice is remembered. Each panel zooms on its own: the + and − buttons, a pinch,
 Ctrl + scroll, or + and − on the keyboard; once zoomed, drag (or Shift + arrows) to move.
 
-That geography is `seismograph/map.json` (25 KB), fetched the first time the map is opened, and
-`seismograph/faults.json` (22 KB), fetched only when the faults are switched on. Both are built by
+The map's period runs from 24 hours to the whole record ("All"). The play button under the maps
+fills the period in through time; the playhead is paced half by time and half by earthquakes, so
+quiet decades pass quickly. Earthquakes can be coloured by depth or by age (`c=depth`, `c=age`),
+on one hue from light to dark. On a crowded panel only the larger earthquakes keep their circle.
+
+With a year per line, the seismograph draws earthquakes below magnitude 3 as a low grey profile
+and writes the magnitude on those of 5 or more.
+
+**Statistics** (`#v=stats`, `sp=10y|1y|30d` for the period) counts what the magnitude and region
+filters match: earthquakes and energy per year, month or day, the spread of magnitudes and the
+busiest days. Bars and days open on the seismograph. Energy is an estimate, log E = 1.5 M + 4.8.
+
+**Stories** (`#story=1909|1969|1980|1998`) are four short bilingual texts in
+`site/js/content/stories.js`, each with links that open the seismograph, the map and the list at that earthquake.
+
+That geography is `site/map.json` (25 KB), fetched the first time the map is opened, and
+`site/faults.json` (22 KB), fetched only when the faults are switched on. Both are built by
 `python3 tools/build_map.py`.
 
 The page is in English and Portuguese, in light and dark. The address bar always holds a link to
@@ -41,14 +56,15 @@ earthquake (same event = within 30 s and 100 km):
 | [EMSC](https://www.seismicportal.eu/) | 1998 → now | Recent events, event pages, and the live feed in the browser |
 | [USGS](https://earthquake.usgs.gov/) | 1900 → now | Moment magnitudes (Mw) for large earthquakes |
 
-All four are free to use with attribution, which the page footer gives. The coastlines come
+Earthquake data follows the source-specific terms in [DATA.md](DATA.md), with attribution in the
+page footer. The coastlines come
 from [Natural Earth](https://www.naturalearthdata.com/) (public domain). The plate boundaries are
 from Bird, P. (2003), *An updated digital model of plate boundaries*, as converted by Hugo Ahlenius,
 Nordpil ([tectonicplates](https://github.com/fraxen/tectonicplates), Open Data Commons Attribution
 License). The active faults are derived from the
 [GEM Global Active Faults Database](https://github.com/GEMScienceTools/gem-global-active-faults)
 (Styron and Pagani, Global Earthquake Model Foundation) under CC BY-SA 4.0, so
-`seismograph/faults.json` stays under that licence. The volcanoes are from the Smithsonian
+`site/faults.json` stays under that licence. The volcanoes are from the Smithsonian
 Institution's [Global Volcanism Program](https://volcano.si.edu), Volcanoes of the World. The
 page's About dialog credits all of them.
 
@@ -88,7 +104,7 @@ deployment only exports the data already stored.
 Subscribe to [Terramotos Portugal RSS](https://andredelgado.github.io/terramotos/rss.xml) in a feed
 reader or another tool. The page also advertises the feed automatically and links to it in the footer.
 
-`seismograph/rss.xml` contains the 100 most recent merged earthquakes, newest first, with no
+`site/rss.xml` contains the 100 most recent merged earthquakes, newest first, with no
 magnitude filter. Each item links to the selected earthquake and includes its UTC time, magnitude
 and scale, region, location, depth, coordinates, sources, and felt intensity when available.
 The feed is in Portuguese. Revisions retain the same GUID, including after rebuilding the database
@@ -104,7 +120,7 @@ The feed suggests a 60-minute refresh interval. When hosting elsewhere, pass
 The private dashboard is [terramotos.goatcounter.com](https://terramotos.goatcounter.com/).
 The production site sends cookieless counts using GoatCounter's
 [documented pixel endpoint](https://www.goatcounter.com/help/pixel); it does not load a third-party
-script. The endpoint is the public `goatcounter` meta tag in `seismograph/index.html`, not a secret.
+script. The endpoint is the public `goatcounter` meta tag in `site/index.html`, not a secret.
 
 The dashboard's Pages section shows six paths:
 
@@ -142,8 +158,8 @@ Everything else is derived from it and can be thrown away:
 - `data/quakes.sqlite` is a working copy. With `--archive DIR`, an empty database is rebuilt from
   the archive in a few seconds, with the same earthquake ids (like `19690228-c63c`), so links to
   earthquakes keep working.
-- `seismograph/data/` is what the page reads: `meta.json` and one file per year.
-- `seismograph/rss.xml` is the RSS feed. It is generated and published with the site, and is not
+- `site/data/` is what the page reads: `meta.json` and one file per year.
+- `site/rss.xml` is the RSS feed. It is generated and published with the site, and is not
   committed to the source branch.
 
 Each run replaces a source's records for the time window it re-read, so revised and deleted events
@@ -154,10 +170,10 @@ are picked up, then rebuilds the merged earthquakes for the days that changed.
 Python 3.9+ with the standard library only.
 
 ```bash
-python3 update.py backfill        # first time: builds data/quakes.sqlite and seismograph/data/
+python3 update.py backfill        # first time: builds data/quakes.sqlite and site/data/
 python3 update.py live            # then as often as you like
 python3 update.py live --archive archive   # the same, also keeping the plain-file archive
-python3 -m http.server 8000 --directory seismograph   # open http://localhost:8000
+python3 -m http.server 8000 --directory site   # open http://localhost:8000
 python3 update.py csv portugal_earthquakes.csv        # every earthquake as a CSV
 ```
 
@@ -177,6 +193,7 @@ For the browser checks, with Node.js 24 LTS and Python 3 installed:
 
 ```bash
 npm ci
+npm run lint
 npm run test:analytics
 npx playwright install chromium webkit
 npm test
@@ -209,21 +226,32 @@ Things to know:
 - On a public repository, GitHub pauses scheduled workflows after 60 days without activity. Any
   commit (or re-enabling the workflow) starts them again.
 - Any other static host works the same way: run `update.py --archive DIR` on a schedule, keep
-  `DIR` somewhere durable, and serve `seismograph/`.
+  `DIR` somewhere durable, and serve `site/`.
 
 ## Files
 
 - `update.py`: the command line
 - `scheduler/`: independent hourly Cloudflare watchdog, local freshness check, and tests
-- `tools/build_map.py`: builds `seismograph/map.json` (land, plate boundaries, volcanoes, labels) and
-  `seismograph/faults.json` (active faults)
+- `tools/build_map.py`: builds `site/map.json` (land, plate boundaries, volcanoes, labels) and
+  `site/faults.json` (active faults)
 - `quake/sources.py`: readers for IPMA, the ISC, EMSC and USGS
 - `quake/store.py`: the database, merging, ids, and the site/CSV export
 - `quake/rss.py`: builds the RSS feed from the merged catalogue
 - `quake/regions.py`: the three region outlines
-- `seismograph/index.html`: the page; it reads `seismograph/data/meta.json` and one file per year
-  from `seismograph/data/years/`, loaded as you scroll
-- `seismograph/analytics.js`: cookieless counts for the view and language, enabled only in production
+- `site/index.html`: the page's markup; it reads `site/data/meta.json` and one file per year
+  from `site/data/years/`, loaded as you scroll
+- `site/app.css`: the styles, with the light and dark colours as variables at the top
+- `site/js/`: the page's code as plain ES modules, with no build step and no framework.
+  `main.js` is the entry point. `state.js` holds the state that more than one module changes;
+  everything else is imported by name. One module per concern: `store.js` (the catalogue in
+  memory), `feeds.js` (IPMA, EMSC and the site's own data), `drum.js`, `list.js`, `stats.js` and
+  `map/` (the views), `card.js`, `selection.js`, `url.js`, `controls.js`, `views.js`, `theme.js`,
+  `i18n.js` with `text.js` (every string, in both languages), and `content/` (the stories and
+  the locator coastlines). Each file starts with a line saying what it is for.
+  `npm run lint` checks that every name is imported and that no module writes to another's
+  variables. When the site is published, the workflow gives `js/` and `app.css` an address that
+  changes with their content, so browsers never mix old and new files.
+- `site/analytics.js`: cookieless counts for the view and language, enabled only in production
 
 ## The dataset
 
@@ -237,3 +265,18 @@ how records are merged, and the terms: non-commercial use with credit to the fou
 - Magnitudes are on mixed scales (ML, mb, Ms, Mw). The CSV has a separate `mw` column.
 - About 0.5% of events are pairs very close in time and place that the ISC itself lists as separate events.
 - Times are UTC.
+
+## Licence
+
+The project's original source code and documentation are licensed under the
+[MIT Licence](LICENSE), copyright © 2026 André Delgado.
+
+Data and third-party components retain their separate terms:
+
+- The earthquake catalogue, archive, generated JSON, CSV downloads and RSS feed follow the
+  [dataset terms](DATA.md).
+- Map data in `site/map.json` and the embedded coastlines follow the source terms listed
+  under [Sources](#sources). `site/faults.json` remains under
+  [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), with credit to the GEM Global
+  Active Faults Database.
+- Third-party dependencies retain their own licences and notices.

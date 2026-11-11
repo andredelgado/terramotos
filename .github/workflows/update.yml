@@ -22,7 +22,7 @@ on:
         default: live
   push:
     branches: [main]
-    paths: ["seismograph/**", "quake/**", "update.py", ".github/workflows/update.yml"]
+    paths: ["site/**", "quake/**", "update.py", ".github/workflows/update.yml"]
 
 permissions:
   contents: write  # to commit to the data branch
@@ -106,11 +106,19 @@ jobs:
             gh release create dataset dist/terramotos-portugal.zip --title "Dataset" --notes "$notes"
           fi
 
+      # Browsers keep a file for ten minutes. Giving the modules and the stylesheet a new address
+      # whenever the code changes means nobody runs a mix of old and new files after a release.
+      - name: Stamp the code with its version
+        run: |
+          v=$(find site/js site/app.css -type f | sort | xargs cat | sha1sum | cut -c1-8)
+          mv site/js "site/js-$v"
+          sed -i "s|\"js/|\"js-$v/|g; s|\"app.css\"|\"app.css?v=$v\"|" site/index.html
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: seismograph
+          path: site
 
       - id: deploy
         uses: actions/deploy-pages@v4

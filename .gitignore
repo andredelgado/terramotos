@@ -1,8 +1,8 @@
 # built by update.py
 data/
 cache/
-seismograph/data/
-seismograph/rss.xml
+site/data/
+site/rss.xml
 *.csv
 __pycache__/
 .claude/
