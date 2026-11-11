@@ -39,6 +39,7 @@ try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === '
 <link rel="modulepreload" href="js/map/panels.js">
 <link rel="modulepreload" href="js/map/period.js">
 <link rel="modulepreload" href="js/map/play.js">
+<link rel="modulepreload" href="js/near.js">
 <link rel="modulepreload" href="js/page.js">
 <link rel="modulepreload" href="js/rail.js">
 <link rel="modulepreload" href="js/selection.js">
@@ -54,7 +55,7 @@ try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === '
 <body>
 
 <header class="top">
-  <h1>Terramotos Portugal<span class="count"><span id="count"></span><span class="unit" data-i18n="unit"> earthquakes</span></span></h1>
+  <h1><span data-i18n="homeHeading">Earthquakes in Portugal</span> <span class="count"><span id="count"></span><span class="unit" data-i18n="unit"> earthquakes</span></span></h1>
   <div class="controls">
     <div class="seg" role="group" aria-label="View" data-i18n-aria="aView" id="views">
       <button type="button" data-view="drum" aria-pressed="true" data-i18n-aria="vDrum"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M1 8h3l1.5-4 2 8.5 2-7L11 8h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="view-label" data-i18n="vDrum">Seismograph</span></button>
@@ -96,23 +97,26 @@ try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === '
       <option value="1" data-i18n="r1">Azores</option>
       <option value="2" data-i18n="r2">Madeira</option>
     </select>
+    <button class="icon" id="nearBtn" type="button" aria-pressed="false" aria-label="Near a place" data-i18n-aria="plTitle">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14.5s4.5-4.2 4.5-8a4.5 4.5 0 0 0-9 0c0 3.8 4.5 8 4.5 8z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="8" cy="6.5" r="1.6" fill="currentColor"/></svg>
+    </button>
     <select id="jump" aria-label="Jump to" data-i18n-aria="aJump">
-      <option value="">Jump to…</option>
+      <option value="" data-i18n="jump">Jump to…</option>
     </select>
   </div>
-  <button class="icon" id="lang" type="button"></button>
+  <a class="icon" id="lang" href="/" hreflang="pt" lang="pt" aria-label="PT · Mudar para português">PT</a>
   <button class="icon" id="theme" type="button" aria-label="Switch between light and dark" data-i18n-aria="aTheme">
     <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z" fill="currentColor"/></svg>
   </button>
 </header>
 
 <div class="status">
-  <button class="latest" id="latest" type="button" hidden></button>
-  <span class="right"><span id="range"></span><span id="freshness" aria-live="polite"></span><span id="inview"></span></span>
+  <span id="latest"><!-- latest-event --></span>
+  <span class="right"><button id="nearChip" type="button" hidden></button><span id="range"></span><span id="freshness" aria-live="polite"></span><span id="inview"></span></span>
 </div>
 
 <main>
-  <div class="drum" id="drum" tabindex="0" data-i18n-aria="aDrum" aria-label="Seismograph drum. Each line is a slice of time, newest on top; the waves are earthquakes. Scroll down to go back in time.">
+  <div class="drum" id="drum" role="region" tabindex="0" data-i18n-aria="aDrum" aria-label="Seismograph drum. Each line is a slice of time, newest on top; the waves are earthquakes. Scroll down to go back in time.">
     <canvas id="drumCanvas"></canvas>
     <div id="spacer"></div>
   </div>
@@ -172,7 +176,13 @@ try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === '
 
 <footer>
   <span><span data-i18n="data">Data:</span> <a href="https://www.ipma.pt/pt/geofisica/sismicidade/" target="_blank" rel="noopener">IPMA</a>, <a href="https://www.isc.ac.uk/" target="_blank" rel="noopener">ISC</a>, <a href="https://www.seismicportal.eu/" target="_blank" rel="noopener">EMSC</a>, <a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS</a></span>
-  <span><a href="rss.xml" type="application/rss+xml">RSS</a> · <span data-i18n="utc">Times in UTC</span> · <button type="button" id="storiesBtn" data-i18n="stories">Stories</button> · <button type="button" id="aboutBtn" data-i18n="about">About</button></span>
+  <div class="footer-links"><a href="rss.xml" type="application/rss+xml">RSS</a> · <span data-i18n="utc">Times in UTC</span> ·
+    <details id="catalogue"><summary data-i18n="browse">Browse catalogue</summary>
+      <div class="catalogue-panel"><!-- year-archive --><!-- recent-events -->
+        <h2 data-i18n="stories">Stories</h2><ul id="catalogueStories"><!-- historical-stories --></ul><!-- updated -->
+      </div>
+    </details> · <button type="button" id="aboutBtn" data-i18n="about">About</button>
+  </div>
 </footer>
 
 <dialog id="about" aria-labelledby="aboutTitle">
@@ -180,12 +190,29 @@ try { const t = localStorage.getItem('seis.theme'); if (t === 'light' || t === '
   <div id="aboutBody"></div>
 </dialog>
 
+<dialog id="near" aria-labelledby="nearTitle">
+  <button class="close" type="button" aria-label="Close" data-i18n-aria="close">×</button>
+  <h2 id="nearTitle" data-i18n="plTitle">Near a place</h2>
+  <p data-i18n="plIntro">Show only the earthquakes within a distance of a town.</p>
+  <input type="search" id="nearSearch" autocomplete="off" aria-label="Town or city" data-i18n-aria="plSearch">
+  <ul class="story-list" id="nearList"></ul>
+  <div class="seg" id="nearRadius" role="group" aria-label="Distance" data-i18n-aria="plRadius">
+    <button type="button" data-km="25" aria-pressed="false">25 km</button>
+    <button type="button" data-km="50" aria-pressed="true">50 km</button>
+    <button type="button" data-km="100" aria-pressed="false">100 km</button>
+    <button type="button" data-km="200" aria-pressed="false">200 km</button>
+  </div>
+  <p class="story-links"><button class="copy" id="nearMe" type="button" data-i18n="plMe">Use my location</button><button class="copy" id="nearClear" type="button" data-i18n="plClear" hidden>Show everywhere</button></p>
+  <p class="fine" id="nearNote" aria-live="polite"></p>
+  <p class="fine" data-i18n="plPrivacy">Your location is only used in this browser, to find the nearest town.</p>
+</dialog>
+
 <dialog id="story" aria-labelledby="storyTitle">
   <button class="close" type="button" aria-label="Close" data-i18n-aria="close">×</button>
   <div id="storyBody"></div>
 </dialog>
 
-<script src="analytics.js"></script>
+<script defer src="analytics.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

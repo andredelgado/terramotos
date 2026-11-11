@@ -9,7 +9,9 @@ from collections import defaultdict
 import datetime as dt
 from pathlib import Path
 import shutil
+import subprocess
 import xml.etree.ElementTree as ET
+from site_archive import LANGS, browse_links, home_path, stamp, write_archive, write_landings
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE_URL = "https://terramotos.com"
@@ -37,6 +39,9 @@ def page_assets(source, destination, meta):
                            "felt": i in felt, "inten": intensity.get(i)})
     events.sort(key=lambda event: (event["t"], event["id"]))
     times = [event["t"] for event in events]
+    for i in range(1, len(events)):
+        if times[i] == times[i - 1]:
+            events[i]["sameTime"] = events[i - 1]["sameTime"] = True
     text_index = {entry["id"]: entry for entry in json.loads((source / "content/index.json").read_text(encoding="utf-8"))}
     buckets = defaultdict(dict)
     for event in events:
@@ -64,7 +69,7 @@ def page_assets(source, destination, meta):
     folder.mkdir()
     for name, entries in sorted(buckets.items()):
         (folder / name).write_text(json.dumps(entries, ensure_ascii=False, separators=(",", ":"), sort_keys=True), encoding="utf-8")
-    return [event["id"] for event in events]
+    return events, [text_index[event["id"]] for event in events if event["id"] in text_index]
 
 
 def build(source, destination):
@@ -84,12 +89,25 @@ def build(source, destination):
     version = hashlib.sha256(b"".join(path.read_bytes() for path in code)).hexdigest()[:12]
     (destination / "js").rename(destination / f"js-{version}")
     index = (destination / "index.html").read_text(encoding="utf-8")
-    index = index.replace('"js/', f'"js-{version}/').replace('"app.css"', f'"app.css?v={version}"')
-    (destination / "index.html").write_text(index, encoding="utf-8")
+    index = index.replace('"js/', f'"/js-{version}/').replace('"app.css"', f'"/app.css?v={version}"')
+    for asset in ("rss.xml", "favicon.svg", "analytics.js"):
+        index = index.replace(f'"{asset}"', f'"/{asset}"')
+    events, stories = page_assets(source, destination, meta)
+    payload = {"template": index, "origin": SITE_URL, "total": len(events), "firstYear": stamp(events[0]).year,
+               "recent": events[-6:][::-1], "stories": stories, "generated": meta.get("generated"),
+               "navigation": {lang: browse_links(lang) for lang in LANGS}}
+    homes = subprocess.run(["node", str(ROOT / "tools/render_home.mjs")], input=json.dumps(payload),
+                           stdout=subprocess.PIPE, text=True, check=True)
+    for lang, html in json.loads(homes.stdout).items():
+        path = destination / home_path(lang).strip("/")
+        path.mkdir(exist_ok=True)
+        (path / "index.html").write_text(html, encoding="utf-8")
+    archive_paths = write_archive(destination, events, stories, SITE_URL)
+    landing_paths = write_landings(destination, events, meta.get("generated"), SITE_URL)
 
     # Split below the sitemap protocol's 50,000-URL limit. These are a handful of assets, not
     # one static HTML file per earthquake (which would exceed the Workers Free asset limit).
-    ids = page_assets(source, destination, meta)
+    ids = [event["id"] for event in events]
     ET.register_namespace("", SITEMAP)
     sitemap_index = ET.Element(f"{{{SITEMAP}}}sitemapindex")
     for language, prefix in (("pt", ""), ("en", "/en")):
@@ -102,12 +120,20 @@ def build(source, destination):
             ET.ElementTree(urls).write(destination / name, encoding="utf-8", xml_declaration=True)
             sitemap = ET.SubElement(sitemap_index, f"{{{SITEMAP}}}sitemap")
             ET.SubElement(sitemap, f"{{{SITEMAP}}}loc").text = SITE_URL + "/" + name
+    archive_map = ET.Element(f"{{{SITEMAP}}}urlset")
+    for path in ["/", "/en/", *archive_paths, *landing_paths]:
+        entry = ET.SubElement(archive_map, f"{{{SITEMAP}}}url")
+        ET.SubElement(entry, f"{{{SITEMAP}}}loc").text = SITE_URL + path
+    ET.ElementTree(archive_map).write(destination / "sitemap-archive.xml", encoding="utf-8", xml_declaration=True)
+    sitemap = ET.SubElement(sitemap_index, f"{{{SITEMAP}}}sitemap")
+    ET.SubElement(sitemap, f"{{{SITEMAP}}}loc").text = SITE_URL + "/sitemap-archive.xml"
     ET.ElementTree(sitemap_index).write(destination / "sitemap.xml", encoding="utf-8", xml_declaration=True)
     (destination / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n", encoding="utf-8")
     (destination / "_headers").write_text(
         "/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n"
         f"/js-{version}/*\n  Cache-Control: public, max-age=31536000, immutable\n"
         "/app.css\n  Cache-Control: public, max-age=31536000, immutable\n"
+        "/content/*\n  X-Robots-Tag: noindex\n"
         "/data/*\n  Cache-Control: public, max-age=300, must-revalidate\n", encoding="utf-8")
     files = [path for path in destination.rglob("*") if path.is_file()]
     if len(files) > 20000 or any(path.stat().st_size > 25 * 1024 * 1024 for path in files):

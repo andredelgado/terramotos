@@ -17,7 +17,7 @@ async function asset(env, path) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (url.hostname === 'www.terramotos.com') return Response.redirect(SITE_URL + url.pathname + url.search, 301);
+    if (url.hostname === 'www.terramotos.com' || url.hostname === 'terramotos-portugal.andredelgado.workers.dev') return Response.redirect(SITE_URL + url.pathname + url.search, 301);
     const match = /^\/(en\/)?sismo\/(\d{8}-[a-f0-9]{4,32})(\.png)?$/.exec(url.pathname);
     const lang = url.pathname.startsWith('/en/') ? 'en' : 'pt';
     const html = (body, status = 200) => new Response(request.method === 'HEAD' ? null : body, {

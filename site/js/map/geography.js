@@ -2,7 +2,7 @@
 import { schedule } from '../drum.js';
 import { lang } from '../i18n.js';
 import { C } from '../theme.js';
-import { pref } from '../util.js';
+import { assetURL, pref } from '../util.js';
 import { view } from '../views.js';
 
 // Detailed geography for the map (tools/build_map.py): land with its neighbours, plate boundaries
@@ -11,7 +11,7 @@ export let GEO = null, geoAsked = false;
 export function loadGeo() {
   if (geoAsked) return;
   geoAsked = true;
-  fetch('map.json')
+  fetch(assetURL('map.json'))
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((g) => { GEO = g; schedule(); })
     .catch(() => { setTimeout(() => { geoAsked = false; if (view === 'map') schedule(); }, 30000); });
@@ -86,7 +86,7 @@ let FAULTS = null, faultsAsked = false;
 function loadFaults() { // a separate file: it is derived from GEM's database and stays under CC BY-SA 4.0
   if (faultsAsked) return;
   faultsAsked = true;
-  fetch('faults.json')
+  fetch(assetURL('faults.json'))
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((f) => { FAULTS = f.faults; schedule(); })
     .catch(() => { setTimeout(() => { faultsAsked = false; if (view === 'map') schedule(); }, 30000); });

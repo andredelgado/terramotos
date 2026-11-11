@@ -31,12 +31,23 @@ and writes the magnitude on those of 5 or more.
 filters match: earthquakes and energy per year, month or day, the spread of magnitudes and the
 busiest days. Bars and days open on the seismograph. Energy is an estimate, log E = 1.5 M + 4.8.
 
+**Near a place** (`#near=<town>&km=<25|50|100|200>`): the pin button in the header keeps only the
+earthquakes within a distance of a town, in every view, and the card then shows how far each one
+is from it. The towns are Portugal's 308 municipalities, in `site/places.json`. "Use my location"
+picks the nearest town in the browser; the position itself is never stored, sent or put in a link.
+Distances need every year's data, so choosing a town fetches the whole catalogue (about 5 MB
+before compression).
+
 **Earthquake pages** (`/sismo/<id>` and `/en/sismo/<id>`): every earthquake in the catalogue has a page with its
 details, a locator map, the other earthquakes within 50 km in the week before and after, and links
 that open the seismograph, the map and the list at that earthquake. It opens from the card
 ("Details"). An earthquake with a text of its own is a **story**: the text is a Markdown file in
-`content/quakes/`, one per language, and those earthquakes are listed under Stories in the footer
-and the Jump menu. See [content/README.md](content/README.md) for the format.
+`content/quakes/`, one per language, and those earthquakes are listed in the Jump menu.
+On the published homepage, **Browse catalogue** links to the six most recent
+catalogued earthquakes, the stories, and the [archive by year](https://terramotos.com/en/archive/)
+([Português](https://terramotos.com/arquivo/)). The archive lists every event in UTC order, 100
+per page; a list of date ranges on the first page of each year links directly to its other pages.
+These links work without JavaScript. See [content/README.md](content/README.md) for the story format.
 
 That geography is `site/map.json` (25 KB), fetched the first time the map is opened, and
 `site/faults.json` (22 KB), fetched only when the faults are switched on. Both are built by
@@ -62,7 +73,8 @@ earthquake (same event = within 30 s and 100 km):
 
 Earthquake data follows the source-specific terms in [DATA.md](DATA.md), with attribution in the
 page footer. The coastlines come
-from [Natural Earth](https://www.naturalearthdata.com/) (public domain). The plate boundaries are
+from [Natural Earth](https://www.naturalearthdata.com/) (public domain). The town locations in
+`site/places.json` are from [GeoNames](https://www.geonames.org/) (CC BY 4.0). The plate boundaries are
 from Bird, P. (2003), *An updated digital model of plate boundaries*, as converted by Hugo Ahlenius,
 Nordpil ([tectonicplates](https://github.com/fraxen/tectonicplates), Open Data Commons Attribution
 License). The active faults are derived from the
@@ -234,16 +246,18 @@ npm run dev:hosting
 ```
 
 `tools/build_site.py` writes `dist/cloudflare/`: the static app with versioned modules, prepared
-earthquake data, the RSS feed and split Portuguese/English sitemaps. Nearby earthquakes are
-calculated during the build, so a page request makes one asset lookup instead of searching the
+earthquake data, the RSS feed and split sitemaps. The build renders Portuguese at `/` and English
+at `/en/`, with links to the year archive, three regional pages, and the dataset methodology in each
+language. Nearby earthquakes are calculated during the build, so a page request makes one asset lookup instead of searching the
 catalogue. Data is grouped into eight files per month to stay within the Workers Free asset count
 and file-size limits. The Worker is checked with `npm run test:hosting`; `npm run deploy` builds
 and publishes through the pinned Wrangler version.
 
 The hourly/daily/monthly update job publishes to Cloudflare. It uses encrypted repository secret
 `CLOUDFLARE_API_TOKEN`, scoped to **Individual Workers Editor** on **terramotos-portugal** only.
-The account id is public and is
-set in `wrangler.jsonc`. Domain connections are configured once in Cloudflare; routine deployments
+The public account id is set in `wrangler.jsonc`. All requests reach the Worker first so both
+alternate hostnames can redirect static files as well as event pages.
+Domain connections are configured once in Cloudflare; routine deployments
 do not alter DNS or require DNS permissions. Renew the deployment token before its expiry.
 
 Each run checks out the `data` branch, rebuilds the database, fetches new records, commits what
@@ -258,6 +272,7 @@ missed updates. The app also reads the live feeds between deployments.
 - `hosting/`: the Cloudflare earthquake-page server and its checks
 - `wrangler.jsonc`: the site Worker's account, asset binding and routing configuration
 - `tools/build_site.py`: prepares the Cloudflare assets, page data and sitemaps
+- `tools/build_places.py`: builds `site/places.json`, the towns for "Near a place"
 - `tools/build_map.py`: builds `site/map.json` (land, plate boundaries, volcanoes, labels) and
   `site/faults.json` (active faults)
 - `quake/sources.py`: readers for IPMA, the ISC, EMSC and USGS
@@ -272,7 +287,7 @@ missed updates. The app also reads the live feeds between deployments.
   everything else is imported by name. One module per concern: `store.js` (the catalogue in
   memory), `feeds.js` (IPMA, EMSC and the site's own data), `drum.js`, `list.js`, `stats.js` and
   `map/` (the views), `card.js`, `selection.js`, `url.js`, `controls.js`, `views.js`, `theme.js`,
-  `page.js` (the earthquake page), `i18n.js` with `text.js` (every string, in both languages),
+  `page.js` (the earthquake page), `near.js` (the near-a-place filter), `i18n.js` with `text.js` (every string, in both languages),
   and `content/land.js` (the locator coastlines). Each file starts with a line saying what it is for.
   `npm run lint` checks that every name is imported and that no module writes to another's
   variables. When the site is published, the workflow gives `js/` and `app.css` an address that

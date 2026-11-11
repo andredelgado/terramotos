@@ -56,8 +56,13 @@ test('English URLs produce English HTML with a Portuguese alternate', async () =
 test('an earthquake without a story still has its own complete page', async () => {
   const response = await fetchPage('/en/sismo/19690228-2222'), html = await response.text();
   assert.equal(response.status, 200);
-  assert.match(html, /<h1>M 4.2 · Later earthquake<\/h1>/);
+  assert.match(html, /<h1>Earthquake M 4\.2 · Later earthquake · 28 February 1969, 04:00:00 UTC<\/h1>/);
   assert.match(html, /1969-02-28T04:00:00.000Z/);
+  const description = html.match(/<meta name="description" content="([^"]+)"/)[1];
+  assert.match(description, /10.0 km deep/);
+  assert.match(description, /IPMA/);
+  assert.doesNotMatch(description, /ISC|EMSC|USGS/);
+  assert.match(html, /href="\/en\/#v=map/);
 });
 
 test('catalogue text is escaped instead of becoming HTML', async () => {
@@ -92,10 +97,14 @@ test('an unavailable catalogue is a retryable server error rather than a false 4
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
 });
 
-test('www redirects to the apex', async () => {
-  const www = await worker.fetch(new Request('https://www.terramotos.com/?example=1'), environment());
-  assert.equal(www.status, 301);
-  assert.equal(www.headers.get('Location'), 'https://terramotos.com/?example=1');
+test('both alternate hosts redirect static and dynamic paths with their query', async () => {
+  for (const host of ['www.terramotos.com', 'terramotos-portugal.andredelgado.workers.dev']) {
+    for (const path of ['/', '/en/', '/sitemap.xml', '/rss.xml', '/content/19090423-721f.pt', '/sismo/' + ID]) {
+      const response = await worker.fetch(new Request('https://' + host + path + '?example=1'), environment());
+      assert.equal(response.status, 301);
+      assert.equal(response.headers.get('Location'), 'https://terramotos.com' + path + '?example=1');
+    }
+  }
 });
 
 test('HEAD keeps the page headers without a body, and writes are rejected', async () => {

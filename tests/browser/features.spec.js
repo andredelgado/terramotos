@@ -128,19 +128,21 @@ test('statistics count what the filters match, per period, and link back to the 
 test('stories open from the footer, a link and the card, in both languages', async ({ page, feed }) => {
   await page.goto('/');
   await expect(page.locator('#inview')).toContainText('in view');
-  await page.locator('#storiesBtn').click();
+  await page.locator('#catalogue summary').click();
+  const menu = page.locator('#catalogueStories a:visible');
+  await expect(menu).toHaveCount(4);
+  await menu.filter({ hasText: '28 February 1969' }).click();
   const story = page.locator('#story');
-  await expect(story.locator('.story-list button')).toHaveCount(4);
-  await story.locator('[data-story="19690228-c63c"]').click();
-  await expect(story.locator('h2')).toHaveText('28 February 1969');
+
+  await expect(story.locator('h2')).toHaveText('The earthquake of 28 February 1969');
   await expect(story.locator('.story-meta')).toContainText('M 7.8');
   await expect(story.locator('.page-text p')).toHaveCount(3);
   await expect(page).toHaveURL(/page=19690228-c63c/);
 
   await page.reload(); // a shared story link
-  await expect(story.locator('h2')).toHaveText('28 February 1969');
+  await expect(story.locator('h2')).toHaveText('The earthquake of 28 February 1969');
   await story.locator('.back').click();
-  await expect(story.locator('.story-list button')).toHaveCount(4);
+  await expect(story.locator('.story-list a')).toHaveCount(4);
   await story.locator('[data-story="19690228-c63c"]').click();
 
   await story.locator('a', { hasText: 'Open on the map' }).click();
@@ -152,7 +154,7 @@ test('stories open from the footer, a link and the card, in both languages', asy
 
   await page.locator('#lang').click();
   await page.locator('#tip .story').click();
-  await expect(story.locator('h2')).toHaveText('28 de fevereiro de 1969');
+  await expect(story.locator('h2')).toHaveText('Sismo de 28 de fevereiro de 1969');
   await page.keyboard.press('Escape');
   await expect(story).toBeHidden();
   await expect(page.locator('#tip')).toBeVisible(); // closing the story keeps the selection
@@ -168,8 +170,8 @@ test('every earthquake has a page with its details and the earthquakes around it
   await expect(dialog).toContainText('2 other earthquakes within 50 km');
 
   // the largest neighbour is first, and opens its own page with its story
-  await dialog.locator('.story-list button').first().click();
-  await expect(dialog.locator('h2')).toHaveText('28 February 1969');
+  await dialog.locator('.story-list a').first().click();
+  await expect(dialog.locator('h2')).toHaveText('The earthquake of 28 February 1969');
   await expect(page).toHaveURL(/page=19690228-c63c/);
   await page.keyboard.press('Escape');
   await expect(page).not.toHaveURL(/page=/);
@@ -179,4 +181,69 @@ test('every earthquake has a page with its details and the earthquakes around it
   await expect(page.locator('#tip .story')).toHaveText('Details');
   await page.locator('#tip .story').click();
   await expect(dialog.locator('h2')).toHaveText('Later earthquake');
+});
+
+test('near a place keeps only the earthquakes around a town, in links and across reloads', async ({ page, feed }) => {
+  await page.goto('/#v=list');
+  await expect(page.locator('#rows tr[data-e]').first()).toBeVisible();
+  const dialog = page.locator('#near'), chip = page.locator('#nearChip'), count = page.locator('#count');
+  await expect(chip).toBeHidden();
+
+  await page.locator('#nearBtn').click();
+  await dialog.locator('#nearSearch').fill('LISB'); // accents and capitals do not matter
+  await dialog.locator('[data-slug="lisboa"]').click();
+  await expect(dialog).toBeHidden();
+  await expect(chip).toHaveText('Within 50 km of Lisboa');
+  await expect(page.locator('#nearBtn')).toHaveAttribute('aria-pressed', 'true');
+  await expect(count).toHaveText('7'); // every year is fetched, so the total is exact
+  await expect(page.locator('#rows tr[data-e]')).toHaveCount(7);
+  await expect(page).toHaveURL(/near=lisboa/);
+
+  await page.locator('#rows tr[data-e]').first().click();
+  await expect(page.locator('#tip')).toContainText(/3\d km from Lisboa/);
+
+  await page.reload(); // the link carries the town
+  await expect(chip).toHaveText('Within 50 km of Lisboa');
+  await expect(count).toHaveText('7');
+
+  await chip.click(); // a wider circle takes in more of the mainland
+  await dialog.locator('[data-km="200"]').click();
+  await page.keyboard.press('Escape');
+  await expect(chip).toHaveText('Within 200 km of Lisboa');
+  await expect(page).toHaveURL(/near=lisboa&km=200/);
+  expect(Number(await count.textContent())).toBeGreaterThan(7);
+
+  await page.locator('#lang').click();
+  await expect(chip).toHaveText('A menos de 200 km de Lisboa');
+  await page.locator('#lang').click();
+
+  await chip.click();
+  await dialog.locator('#nearClear').click();
+  await expect(chip).toBeHidden();
+  await expect(page).not.toHaveURL(/near=/);
+  await expect(count).toHaveText('245');
+});
+
+test('the visitor’s location picks the nearest town and is not put in the link', async ({ page, feed, context }) => {
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 38.531, longitude: -28.642 });
+  await page.goto('/');
+  await expect(page.locator('#inview')).toContainText('in view');
+  await page.locator('#nearBtn').click();
+  await page.locator('#nearMe').click();
+  await expect(page.locator('#nearChip')).toHaveText('Within 50 km of Horta');
+  await expect(page).toHaveURL(/near=horta/);
+  expect(page.url()).not.toMatch(/38\.5|28\.6/);
+});
+
+test('a visitor far from Portugal is asked to choose a town', async ({ page, feed, context }) => {
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 48.85, longitude: 2.35 }); // Paris
+  await page.goto('/');
+  await expect(page.locator('#inview')).toContainText('in view');
+  await page.locator('#nearBtn').click();
+  await page.locator('#nearMe').click();
+  await expect(page.locator('#nearNote')).toHaveText('You are far from Portugal: choose a town instead.');
+  await expect(page.locator('#nearChip')).toBeHidden();
+  await expect(page.locator('#near')).toBeVisible();
 });

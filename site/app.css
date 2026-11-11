@@ -66,14 +66,25 @@ select {
   border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--fg); cursor: pointer;
 }
 select:hover, .icon:hover { border-color: var(--muted); }
+.icon[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+#nearChip { padding: 0; border: 0; background: none; cursor: pointer; font: inherit; color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+#nearSearch { width: 100%; height: 36px; padding: 0 10px; margin: 0 0 4px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--fg); font: inherit; }
+#nearList .none { padding: 10px 0; color: var(--muted); border-top: 1px solid var(--line); }
+#nearRadius { margin: 10px 0 0; }
+#near .fine + .fine { margin-top: 6px; }
 button:focus-visible, select:focus-visible, .drum:focus-visible, .rail:focus-visible, .map-plot:focus-visible, a:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 .list:has(table:focus-visible) { outline: 2px solid var(--fg); outline-offset: -2px; }
 
+#lang { text-decoration: none; font: 500 13px/1 var(--font); }
+@media (min-width: 601px) { #jump { width: 8.5rem; } }
 .status { display: flex; justify-content: space-between; gap: 4px 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); padding-bottom: 10px; }
 .status b { color: var(--fg); font-weight: 500; }
 .status .right { display: flex; flex-wrap: wrap; min-width: 0; max-width: 100%; gap: 4px 14px; }
 #freshness[data-state="offline"], #freshness[data-state="stale"] { color: var(--fg); }
+#latest { min-width: 0; max-width: 100%; }
+#latest:empty { display: none; }
 .latest {
+  display: block; text-decoration: none;
   min-width: 0; max-width: 100%; padding: 0; border: 0; background: none; cursor: pointer; text-align: left;
   font: inherit; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -163,10 +174,10 @@ dialog .facts .meta { color: var(--muted); font-size: 13px; }
 dialog .map { max-width: 360px; margin-bottom: 4px; }
 .story-list { list-style: none; padding: 0; margin: 0 0 4px; }
 .story-list li { margin: 0; border-top: 1px solid var(--line); }
-.story-list button { display: block; width: 100%; padding: 10px 0; border: 0; background: none; text-align: left; cursor: pointer; font: inherit; color: var(--fg); }
-.story-list button b { font-weight: 600; }
-.story-list button span { display: block; color: var(--muted); font-size: 13px; }
-.story-list button:hover b { text-decoration: underline; text-underline-offset: 3px; }
+.story-list :is(button, a) { display: block; text-decoration: none; width: 100%; padding: 10px 0; border: 0; background: none; text-align: left; cursor: pointer; font: inherit; color: var(--fg); }
+.story-list :is(button, a) b { font-weight: 600; }
+.story-list :is(button, a) span { display: block; color: var(--muted); font-size: 13px; }
+.story-list :is(button, a):hover b { text-decoration: underline; text-underline-offset: 3px; }
 dialog .back { padding: 0; border: 0; background: none; cursor: pointer; font: inherit; color: var(--muted); }
 dialog .back:hover { color: var(--fg); }
 .map-zoom { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
@@ -255,6 +266,25 @@ dialog .fine { margin: 0; color: var(--muted); font-size: 13px; }
 dialog .get { margin-top: 12px; }
 dialog a { color: var(--fg); font-weight: 500; text-underline-offset: 3px; }
 footer a:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+.footer-links { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 4px; }
+#catalogue summary { cursor: pointer; }
+footer { position: relative; }
+.catalogue-panel {
+  position: absolute; right: 0; bottom: 100%; z-index: 6; box-sizing: border-box;
+  width: min(100%, 24rem); max-height: 65dvh; overflow: auto; padding: 14px 18px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--fg); box-shadow: var(--shadow);
+}
+.catalogue-panel .recent li { margin-bottom: .5rem; }
+.catalogue-panel small a { display: inline; }
+.catalogue-panel h2 { margin: 12px 0 4px; font-size: 14px; }
+.catalogue-panel ul { list-style: none; margin: 0; padding: 0; }
+.catalogue-panel a { display: block; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; }
+html[lang="en"] .catalogue-panel [lang="pt"], html[lang="pt"] .catalogue-panel [lang="en"] { display: none; }
+@media (scripting: none) {
+  body { height: auto; overflow: auto; }
+  .controls, .top button, .status .right, main, #aboutBtn { display: none; }
+  .catalogue-panel { position: static; max-height: none; margin-top: .5rem; box-shadow: none; }
+}
 
 @media (max-width: 1300px) {
   .controls { order: 3; flex: 1 1 100%; min-width: 0; flex-wrap: wrap; }
@@ -275,6 +305,19 @@ footer a:hover { color: var(--fg); text-decoration: underline; text-underline-of
   .map-panel:first-child { border-right: 0; }
   .map-panels.filtered { flex: 1; min-height: 280px; }
   .map-panels.filtered .map-panel { flex: 1; height: auto; min-height: 280px; }
+}
+@media (scripting: enabled) and (max-width: 600px) {
+  .status { display: block; }
+  .status .right {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "range count" "fresh fresh";
+    margin-top: 4px; min-height: calc(2.8em + 4px); align-content: start;
+  }
+  .status .right:has(#nearChip:not([hidden])) { grid-template-areas: "chip chip" "range count" "fresh fresh"; }
+  #nearChip { grid-area: chip; justify-self: start; }
+  #range { grid-area: range; }
+  #inview { grid-area: count; }
+  #freshness { grid-area: fresh; }
 }
 @media (max-width: 600px) {
   h1 .unit { display: none; }

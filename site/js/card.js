@@ -9,7 +9,7 @@ import { S } from './state.js';
 import { E } from './store.js';
 import { viewHash } from './url.js';
 import { hasText, openPage } from './page.js';
-import { esc } from './util.js';
+import { esc, kmBetween } from './util.js';
 import { view } from './views.js';
 
 /* ---------- tooltip ---------- */
@@ -37,6 +37,7 @@ export function tipHTML(e, isPinned) {
     (ev.place ? `<div class="where">${esc(placeName(ev.place))}</div>` : '') +
     (feltLine ? `<div>${esc(feltLine)}</div>` : '') +
     `<div class="meta">${esc(meta)}</div>` +
+    (S.near ? `<div class="meta">${esc(L.plFrom(Math.round(kmBetween(S.near, ev)), S.near.name))}</div>` : '') +
     (ev.live ? `<div class="prelim">${L.prelim}</div>` : `<div class="src">${L.source} ${esc(src)}</div>`) +
     (isPinned ? mapSVG(ev) + `<div class="links"><a href="${link[0]}" target="_blank" rel="noopener">${link[1]} ↗</a>` +
       (/^\d{8}-/.test(ev.id) ? `<button class="copy" type="button">${L.copy}</button>` : '') +

@@ -3,9 +3,9 @@ name: Python checks
 on:
   push:
     branches: [main]
-    paths: ["quake/**", "update.py", "content/**", "site/content/**", "tools/build_content.py", "tools/build_site.py", "tests/test_*.py", ".github/workflows/python.yml"]
+    paths: ["quake/**", "update.py", "content/**", "site/content/**", "tools/build_content.py", "tools/build_site.py", "tools/site_archive.py", "tools/render_home.mjs", "site/index.html", "site/js/text.js", "site/js/names.js", "site/js/util.js", "hosting/catalogue.mjs", "tests/test_*.py", ".github/workflows/python.yml"]
   pull_request:
-    paths: ["quake/**", "update.py", "content/**", "site/content/**", "tools/build_content.py", "tools/build_site.py", "tests/test_*.py", ".github/workflows/python.yml"]
+    paths: ["quake/**", "update.py", "content/**", "site/content/**", "tools/build_content.py", "tools/build_site.py", "tools/site_archive.py", "tools/render_home.mjs", "site/index.html", "site/js/text.js", "site/js/names.js", "site/js/util.js", "hosting/catalogue.mjs", "tests/test_*.py", ".github/workflows/python.yml"]
   workflow_dispatch:
 
 permissions:
@@ -20,6 +20,9 @@ jobs:
         python-version: ["3.9", "3.12"]
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}

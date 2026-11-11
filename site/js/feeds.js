@@ -7,7 +7,7 @@ import { ago, fmtDate, fmtTime, L } from './i18n.js';
 import { updateLatest } from './latest.js';
 import { S } from './state.js';
 import { applyCounts, CHUNKS, E, IPMA, LIVE, rebuild, regionOf } from './store.js';
-import { hashId } from './util.js';
+import { assetURL, hashId } from './util.js';
 
 let ipmaAt = 0, emscAt = 0, ipmaFailed = false; // successful data receipts, rather than connection times
 let liveOn = false;
@@ -134,7 +134,7 @@ function applyMeta(m, first) {
   showFreshness(); schedule();
 }
 export function loadMeta(first) {
-  return fetch('data/meta.json', { cache: 'no-cache' })
+  return fetch(assetURL('data/meta.json'), { cache: 'no-cache' })
     .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then((m) => { if (first || !S.META || m.generated !== S.META.generated) applyMeta(m, first); });
 }
