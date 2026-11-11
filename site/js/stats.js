@@ -16,7 +16,8 @@ export function setStatsPeriod(period) {
   schedule(); writeHash();
 }
 document.querySelectorAll('#speriods button').forEach((b) => b.addEventListener('click', () => setStatsPeriod(b.dataset.sp)));
-const filterHash = (parts) => '#' + [S.minMag !== 'all' ? 'm=' + S.minMag : '', S.region !== 'all' ? 'r=' + S.region : '', ...parts].filter(Boolean).join('&');
+const filterHash = (parts) => '#' + [S.minMag !== 'all' ? 'm=' + S.minMag : '', S.region !== 'all' ? 'r=' + S.region : '',
+  S.near ? 'near=' + S.near.slug : '', S.near && S.nearKm !== 50 ? 'km=' + S.nearKm : '', ...parts].filter(Boolean).join('&');
 const drumHash = (s, t) => filterHash(['s=' + s, 't=' + new Date(Math.min(S.END, t) * 1000).toISOString().slice(0, 13)]);
 export function renderStats() {
   if (!S.META) return;
@@ -27,7 +28,7 @@ export function renderStats() {
   if (missing.some((y) => FAILED.has(y))) setTimeout(schedule, 21000);
   $('#range').innerHTML = `<b>${fmtDate(a)} – ${fmtDate(b)}</b>`;
   $('#inview').textContent = missing.some((y) => FAILED.has(y)) ? L.failedY(missing.find((y) => FAILED.has(y))) : '';
-  const key = [statsPeriod, S.minMag, S.region, lang, N, missing.length, Math.floor(b / 600)].join();
+  const key = [statsPeriod, S.minMag, S.region, S.near?.slug, S.nearKm, lang, N, missing.length, Math.floor(b / 600)].join();
   if (key === S.statsKey) return;
   S.statsKey = key;
   if (missing.length) { statsBox.innerHTML = `<p class="stats-wait">${L.stLoading(years.length - missing.length, years.length)}</p>`; return; }

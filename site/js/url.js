@@ -6,6 +6,7 @@ import { centerTime, schedule, scrollToTime, setVTop } from './drum.js';
 import { lang } from './i18n.js';
 import { mapColour, setColour } from './map/colour.js';
 import { chooseMapPeriod, mapLive, parseMapDate, setMapRange } from './map/period.js';
+import { RADII, setNearBySlug } from './near.js';
 import { openPage, pageDlg, pageOpen } from './page.js';
 import { pinnedId, unpin } from './selection.js';
 import { S } from './state.js';
@@ -28,6 +29,7 @@ export function viewHash(fixedMap = false) {
   if (span !== '3h') p.push('s=' + span);
   if (S.minMag !== 'all') p.push('m=' + S.minMag);
   if (S.region !== 'all') p.push('r=' + S.region);
+  if (S.near) p.push('near=' + S.near.slug, ...(S.nearKm === 50 ? [] : ['km=' + S.nearKm]));
   const sharedId = pendingJump ? pendingJump.id : pinnedId;
   if (sharedId && /^\d{8}-/.test(sharedId)) p.push('q=' + sharedId);
   else if (view !== 'map' && view !== 'stats' && scroller().scrollTop > 0) p.push('t=' + new Date(centerTime() * 1000).toISOString().slice(0, 19));
@@ -48,6 +50,8 @@ export function applyHash() {
   const m = ['2', '3', '4', '5'].includes(p.get('m')) ? p.get('m') : 'all';
   const r = ['0', '1', '2'].includes(p.get('r')) ? p.get('r') : 'all';
   if (m !== S.minMag || r !== S.region) { S.minMag = m; S.region = r; magSel.value = m; regSel.value = r; onFilter(); }
+  const near = p.get('near') || '', km = RADII.includes(Number(p.get('km'))) ? Number(p.get('km')) : 50;
+  if (near !== (S.near?.slug || '') || (near && km !== S.nearKm)) setNearBySlug(near, km);
   const nextView = VIEWS.includes(p.get('v')) ? p.get('v') : 'drum';
   if (nextView !== view) setView(nextView, false);
   if (s !== span) setSpan(s);

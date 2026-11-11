@@ -180,3 +180,68 @@ test('every earthquake has a page with its details and the earthquakes around it
   await page.locator('#tip .story').click();
   await expect(dialog.locator('h2')).toHaveText('Later earthquake');
 });
+
+test('near a place keeps only the earthquakes around a town, in links and across reloads', async ({ page, feed }) => {
+  await page.goto('/#v=list');
+  await expect(page.locator('#rows tr[data-e]').first()).toBeVisible();
+  const dialog = page.locator('#near'), chip = page.locator('#nearChip'), count = page.locator('#count');
+  await expect(chip).toBeHidden();
+
+  await page.locator('#nearBtn').click();
+  await dialog.locator('#nearSearch').fill('LISB'); // accents and capitals do not matter
+  await dialog.locator('[data-slug="lisboa"]').click();
+  await expect(dialog).toBeHidden();
+  await expect(chip).toHaveText('Within 50 km of Lisboa');
+  await expect(page.locator('#nearBtn')).toHaveAttribute('aria-pressed', 'true');
+  await expect(count).toHaveText('7'); // every year is fetched, so the total is exact
+  await expect(page.locator('#rows tr[data-e]')).toHaveCount(7);
+  await expect(page).toHaveURL(/near=lisboa/);
+
+  await page.locator('#rows tr[data-e]').first().click();
+  await expect(page.locator('#tip')).toContainText(/3\d km from Lisboa/);
+
+  await page.reload(); // the link carries the town
+  await expect(chip).toHaveText('Within 50 km of Lisboa');
+  await expect(count).toHaveText('7');
+
+  await chip.click(); // a wider circle takes in more of the mainland
+  await dialog.locator('[data-km="200"]').click();
+  await page.keyboard.press('Escape');
+  await expect(chip).toHaveText('Within 200 km of Lisboa');
+  await expect(page).toHaveURL(/near=lisboa&km=200/);
+  expect(Number(await count.textContent())).toBeGreaterThan(7);
+
+  await page.locator('#lang').click();
+  await expect(chip).toHaveText('A menos de 200 km de Lisboa');
+  await page.locator('#lang').click();
+
+  await chip.click();
+  await dialog.locator('#nearClear').click();
+  await expect(chip).toBeHidden();
+  await expect(page).not.toHaveURL(/near=/);
+  await expect(count).toHaveText('245');
+});
+
+test('the visitor’s location picks the nearest town and is not put in the link', async ({ page, feed, context }) => {
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 38.531, longitude: -28.642 });
+  await page.goto('/');
+  await expect(page.locator('#inview')).toContainText('in view');
+  await page.locator('#nearBtn').click();
+  await page.locator('#nearMe').click();
+  await expect(page.locator('#nearChip')).toHaveText('Within 50 km of Horta');
+  await expect(page).toHaveURL(/near=horta/);
+  expect(page.url()).not.toMatch(/38\.5|28\.6/);
+});
+
+test('a visitor far from Portugal is asked to choose a town', async ({ page, feed, context }) => {
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 48.85, longitude: 2.35 }); // Paris
+  await page.goto('/');
+  await expect(page.locator('#inview')).toContainText('in view');
+  await page.locator('#nearBtn').click();
+  await page.locator('#nearMe').click();
+  await expect(page.locator('#nearNote')).toHaveText('You are far from Portugal: choose a town instead.');
+  await expect(page.locator('#nearChip')).toBeHidden();
+  await expect(page.locator('#near')).toBeVisible();
+});

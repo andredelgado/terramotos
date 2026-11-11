@@ -4,6 +4,9 @@ export const S = {
   // controls.js
   minMag: undefined,
   region: undefined,
+  // near.js
+  near: undefined,
+  nearKm: undefined,
   // store.js
   META: undefined,
   END: undefined,

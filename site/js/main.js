@@ -12,6 +12,7 @@ import { playChrome } from './map/play.js';
 import { S } from './state.js';
 import { setStatsPeriod, statsPeriod } from './stats.js';
 import { applyCounts, ensureYear, N } from './store.js';
+import { showNear } from './near.js';
 import { pageDlg, renderPage } from './page.js';
 import { readColors } from './theme.js';
 import { applyHash, countUsage, writeHash } from './url.js';
@@ -60,6 +61,7 @@ function applyLang() {
   if (!tip.hidden && tipFor >= 0 && tipFor < N) tip.innerHTML = tipHTML(tipFor, tipPinned);
   S.statsKey = ''; showColour(); playChrome();
   if (pageDlg.open) renderPage();
+  showNear();
   showFreshness(); updateLatest(); schedule(); countUsage();
 }
 const about = $('#about');
